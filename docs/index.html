@@ -93,6 +93,13 @@
       color: var(--green);
       line-height: 1;
     }
+    .card-pax {
+      font-size: .85rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+    .card-pax span { color: var(--text); font-weight: 600; }
     .card-sub { font-size: .72rem; color: var(--muted); margin-top: 5px; }
     .card-trend { font-size: .78rem; margin-top: 8px; font-variant-numeric: tabular-nums; }
     .up   { color: var(--red); }
@@ -118,6 +125,13 @@
       font-variant-numeric: tabular-nums;
       line-height: 1;
     }
+    .combo-pax {
+      font-size: .95rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .combo-pax span { color: var(--text); font-weight: 600; }
     .combo-detail { color: var(--muted); font-size: .8rem; margin-top: 6px; }
     .combo-label  { color: var(--muted); font-size: .7rem; font-family: monospace;
                     text-transform: uppercase; letter-spacing: .08em; text-align: right; }
@@ -230,6 +244,7 @@
   <div class="combo-hero" id="combo-hero">
     <div>
       <div class="combo-price" id="combo-price">—</div>
+      <div class="combo-pax" id="combo-pax"></div>
       <div class="combo-detail" id="combo-detail"></div>
     </div>
     <div>
@@ -279,7 +294,8 @@
             <th>Tipo</th>
             <th>Ruta</th>
             <th>Vuelo</th>
-            <th>Precio</th>
+            <th>Precio total</th>
+      <th>/pers</th>
             <th>Esc</th>
             <th>Aerolínea</th>
             <th>Duración</th>
@@ -358,10 +374,11 @@ const CHART_OPTS = {
 };
 
 // ── Globals ───────────────────────────────────────────────────────────────────
-let allRows   = [];
-let config    = null;
+let allRows    = [];
+let config     = null;
 let activeTrip = null;
-let charts    = {};
+let totalPax   = 4;
+let charts     = {};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function parseCSV(text) {
@@ -371,6 +388,10 @@ function parseCSV(text) {
     const vals = line.split(',');
     return Object.fromEntries(headers.map((h, i) => [h, (vals[i] || '').trim()]));
   });
+}
+
+function perPax(total) {
+  return Math.floor(total / totalPax).toLocaleString('es-ES');
 }
 
 function fmtDate(s) {
@@ -489,7 +510,9 @@ function renderTrip(tripId) {
   // ── Combo hero ──
   if (combos.length) {
     const latest = combos[combos.length - 1];
-    document.getElementById('combo-price').textContent  = `€${latest.price.toLocaleString('es-ES')}`;
+    document.getElementById('combo-price').textContent = `€${latest.price.toLocaleString('es-ES')}`;
+    document.getElementById('combo-pax').innerHTML =
+      `<span>€${perPax(latest.price)}/pers</span> · ${totalPax} personas`;
     document.getElementById('combo-detail').textContent =
       `IDA €${latest.out.toLocaleString('es-ES')} + VUELTA €${latest.ret.toLocaleString('es-ES')}`;
 
@@ -519,6 +542,7 @@ function renderTrip(tripId) {
     return `<div class="card">
       <div class="card-label ${tagCls}">${label}</div>
       <div class="card-price">${latest != null ? '€' + latest.toLocaleString('es-ES') : '—'}</div>
+      ${latest != null ? `<div class="card-pax"><span>€${perPax(latest)}/pers</span> · ${totalPax} pers</div>` : ''}
       <div class="card-sub">${pts.length} día${pts.length !== 1 ? 's' : ''} de histórico</div>
       ${trend ? `<div class="card-trend ${trend.cls}">${trend.text}</div>` : ''}
     </div>`;
@@ -588,6 +612,7 @@ function renderTable(tripId) {
       <td>${iata(r.origin)} → ${iata(r.destination)}</td>
       <td class="mono">${r.flight_date}</td>
       <td class="price-cell">€${parseFloat(r.price_eur).toLocaleString('es-ES')}</td>
+      <td style="color:var(--muted);font-variant-numeric:tabular-nums">€${perPax(parseFloat(r.price_eur))}</td>
       <td class="mono">${r.stops}</td>
       <td style="font-size:.75rem">${r.airline}</td>
       <td class="mono">${fmtDuration(r.duration_m)}</td>
@@ -621,8 +646,9 @@ async function main() {
     if (!csvResp.ok) throw new Error(`CSV: HTTP ${csvResp.status}`);
     if (!cfgResp.ok) throw new Error(`Config: HTTP ${cfgResp.status}`);
 
-    allRows = parseCSV(await csvResp.text());
-    config  = await cfgResp.json();
+    allRows   = parseCSV(await csvResp.text());
+    config    = await cfgResp.json();
+    totalPax  = (config.passengers?.adults || 2) + (config.passengers?.children || 0);
 
     if (!allRows.length) throw new Error('CSV vacío — ejecuta el script primero');
     if (!config.trips?.length) throw new Error('config.json sin viajes');

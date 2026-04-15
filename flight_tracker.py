@@ -134,6 +134,10 @@ def fmt_duration(m):
     return f"{h}h{mm:02d}m"
 
 
+def fmt_price(total, pax):
+    return f"€{total} (€{total // pax}/pers)"
+
+
 def fmt_own(result):
     if result is None:
         return "📊 media propia: acumulando datos…"
@@ -292,6 +296,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
     trip_id   = trip["id"]
     out_cfg   = trip["outbound"]
     ret_cfg   = trip["return"]
+    pax       = passengers["adults"] + passengers.get("children", 0)
 
     any_google_alert = False
     any_own_alert    = False
@@ -337,7 +342,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
         g_tag = " 🚨 <b>GOOGLE: PRECIO BAJO</b>" if g_text == "BAJO" else ""
         lines.append(
             f"\n  <b>{dep_date} → {dest_name}</b>\n"
-            f"  💶 €{best['price']} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
+            f"  💶 {fmt_price(best['price'], pax)} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
             f"  {g_emoji} Google: {g_text} (típico {typ_str}){g_tag}\n"
             f"  {fmt_own(own)}"
         )
@@ -381,7 +386,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
         g_tag = " 🚨 <b>GOOGLE: PRECIO BAJO</b>" if g_text == "BAJO" else ""
         lines.append(
             f"\n  <b>{ret_date} {orig_name}</b>\n"
-            f"  💶 €{best['price']} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
+            f"  💶 {fmt_price(best['price'], pax)} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
             f"  {g_emoji} Google: {g_text} (típico {typ_str}){g_tag}\n"
             f"  {fmt_own(own)}"
         )
@@ -405,7 +410,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
         on    = IATA.get(br[1]["origin"],      br[1]["origin"])
         lines.append(
             f"\n💰 <b>MEJOR COMBO:</b> {IATA.get(out_origin, out_origin)}→{dn} ({bo[0]}) "
-            f"+ {on}→{IATA.get(ret_dest, ret_dest)} ({br[0]}) = <b>€{total}</b>"
+            f"+ {on}→{IATA.get(ret_dest, ret_dest)} ({br[0]}) = <b>{fmt_price(total, pax)}</b>"
         )
 
     return lines, any_google_alert, any_own_alert

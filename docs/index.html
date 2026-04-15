@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vuelos Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:       #0B0F14;
+      --surface:  #141B24;
+      --surface2: #1A2332;
+      --border:   #2A3A4A;
+      --text:     #EDEFF2;
+      --muted:    #6A7A8A;
+      --green:    #00FF88;
+      --blue:     #00BBFF;
+      --red:      #FF6B6B;
+      --yellow:   #FFD93D;
+      --purple:   #BB88FF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 20px 24px 48px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: .06em; }
+    .logo span { color: var(--green); }
+    .header-meta { color: var(--muted); font-size: .75rem; font-family: monospace; text-align: right; }
+
+    /* ── Trip tabs ── */
+    .trip-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .trip-tab {
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: .8rem;
+      cursor: pointer;
+      transition: all .15s;
+      font-family: monospace;
+      letter-spacing: .04em;
+    }
+    .trip-tab:hover { border-color: var(--blue); color: var(--blue); }
+    .trip-tab.active { background: var(--blue); border-color: var(--blue); color: #000; font-weight: 700; }
+
+    /* ── Cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+    .card-label {
+      font-size: .68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-family: monospace;
+      margin-bottom: 6px;
+    }
+    .card-price {
+      font-size: 1.9rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--green);
+      line-height: 1;
+    }
+    .card-sub { font-size: .72rem; color: var(--muted); margin-top: 5px; }
+    .card-trend { font-size: .78rem; margin-top: 8px; font-variant-numeric: tabular-nums; }
+    .up   { color: var(--red); }
+    .down { color: var(--green); }
+    .flat { color: var(--muted); }
+
+    /* ── Combo hero ── */
+    .combo-hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .combo-price {
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: var(--yellow);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .combo-detail { color: var(--muted); font-size: .8rem; margin-top: 6px; }
+    .combo-label  { color: var(--muted); font-size: .7rem; font-family: monospace;
+                    text-transform: uppercase; letter-spacing: .08em; text-align: right; }
+    .combo-trend  { font-size: .85rem; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+    /* ── Sections ── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      font-family: monospace;
+      margin-bottom: 14px;
+    }
+    .section-title b { color: var(--text); font-weight: 600; }
+    .chart-wrap { position: relative; height: 200px; }
+    .chart-wrap-sm { position: relative; height: 140px; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    th {
+      text-align: left; color: var(--muted); font-weight: 400;
+      font-family: monospace; font-size: .68rem; text-transform: uppercase;
+      letter-spacing: .05em; padding: 6px 10px; border-bottom: 1px solid var(--border);
+    }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--surface2); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: .68rem; font-family: monospace; white-space: nowrap;
+    }
+    .badge-low     { background: rgba(0,255,136,.12); color: var(--green); }
+    .badge-typical { background: rgba(255,217,61,.12); color: var(--yellow); }
+    .badge-high    { background: rgba(255,107,107,.12); color: var(--red); }
+    .badge-none    { background: rgba(106,122,138,.1);  color: var(--muted); }
+    .tag-out  { color: var(--blue);   font-size: .7rem; font-family: monospace; }
+    .tag-ret  { color: var(--yellow); font-size: .7rem; font-family: monospace; }
+    .mono     { font-family: monospace; font-size: .75rem; color: var(--muted); }
+    .price-cell { color: var(--green); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* ── Config panel ── */
+    .config-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    .config-toggle {
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none;
+    }
+    .config-toggle span { font-size: .72rem; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--muted); font-family: monospace; }
+    .config-toggle .chevron { color: var(--muted); transition: transform .2s; font-size: .9rem; }
+    .config-toggle.open .chevron { transform: rotate(180deg); }
+    .config-body { display: none; margin-top: 16px; }
+    .config-body.open { display: block; }
+    .config-hint {
+      background: var(--surface2); border-radius: 6px; padding: 14px 16px;
+      font-family: monospace; font-size: .78rem; line-height: 1.7;
+      color: var(--text); white-space: pre-wrap; word-break: break-all;
+      border: 1px solid var(--border);
+    }
+    .config-note { color: var(--muted); font-size: .75rem; margin-top: 10px; line-height: 1.5; }
+
+    /* ── States ── */
+    #loading { text-align: center; color: var(--muted); padding: 80px 20px;
+               font-family: monospace; font-size: .9rem; }
+    .pulse { display: inline-block; animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+    #error-msg { text-align: center; padding: 60px 20px; }
+    #error-msg .err-title { color: var(--red); font-size: 1rem; margin-bottom: 8px; }
+    #error-msg .err-detail { color: var(--muted); font-size: .8rem; line-height: 1.6; }
+
+    @media (max-width: 600px) {
+      body { padding: 12px 14px 32px; }
+      .combo-hero { flex-direction: column; align-items: flex-start; }
+      .combo-price { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading"><span class="pulse">⟳</span> Cargando datos…</div>
+<div id="error-msg" style="display:none"></div>
+<div id="app" style="display:none">
+
+  <header>
+    <div class="logo">✈ VUELOS <span>TRACKER</span></div>
+    <div class="header-meta">
+      <div id="last-update"></div>
+      <div id="data-points"></div>
+    </div>
+  </header>
+
+  <div class="trip-tabs" id="trip-tabs"></div>
+
+  <!-- Combo hero -->
+  <div class="combo-hero" id="combo-hero">
+    <div>
+      <div class="combo-price" id="combo-price">—</div>
+      <div class="combo-detail" id="combo-detail"></div>
+    </div>
+    <div>
+      <div class="combo-label">Mejor combo hoy</div>
+      <div class="combo-trend" id="combo-trend"></div>
+      <div class="chart-wrap-sm" style="width:260px; margin-top:10px">
+        <canvas id="chart-combo"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="cards" id="cards"></div>
+
+  <!-- Outbound chart -->
+  <div class="section">
+    <div class="section-title">IDA — <b id="out-title"></b></div>
+    <div class="chart-wrap"><canvas id="chart-outbound"></canvas></div>
+  </div>
+
+  <!-- Return chart -->
+  <div class="section">
+    <div class="section-title">VUELTA — <b id="ret-title"></b></div>
+    <div class="chart-wrap"><canvas id="chart-return"></canvas></div>
+  </div>
+
+  <!-- History table -->
+  <div class="section">
+    <div class="section-title">HISTORIAL — <b id="table-title">últimas 20 entradas</b></div>
+    <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap">
+      <select id="filter-type" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;font-size:.78rem;">
+        <option value="">Todos los tipos</option>
+        <option value="outbound">Solo IDA</option>
+        <option value="return">Solo VUELTA</option>
+      </select>
+      <select id="filter-stops" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;font-size:.78rem;">
+        <option value="">Todas las escalas</option>
+        <option value="0">Directos (0 esc)</option>
+        <option value="1">Máx 1 escala</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Scraping</th>
+            <th>Tipo</th>
+            <th>Ruta</th>
+            <th>Vuelo</th>
+            <th>Precio</th>
+            <th>Esc</th>
+            <th>Aerolínea</th>
+            <th>Duración</th>
+            <th>Google</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Config panel -->
+  <div class="config-section">
+    <div class="config-toggle" id="config-toggle" onclick="toggleConfig()">
+      <span>Cómo añadir / modificar búsquedas</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="config-body" id="config-body">
+      <div class="config-hint" id="config-hint"></div>
+      <div class="config-note">
+        Edita <code>config.json</code> en el repo, haz commit y push.<br>
+        El script se ejecutará con la nueva configuración en el siguiente cron (09:00 CET)<br>
+        o puedes lanzarlo manualmente: <code>Actions → Run workflow</code>.<br><br>
+        Para vuelos directos: <code>"max_stops": 0</code> en outbound o return.<br>
+        Para añadir un viaje nuevo: copia el bloque y cámbialo.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Constantes ────────────────────────────────────────────────────────────────
+const REPO    = 'kiwi8891/vuelos-tracker';
+const CSV_URL = `https://raw.githubusercontent.com/${REPO}/main/data/prices.csv`;
+const CFG_URL = `https://raw.githubusercontent.com/${REPO}/main/config.json`;
+
+const IATA = {
+  ICN:'Seúl', TPE:'Taipei', HKG:'Hong Kong',
+  PEK:'Pekín', PVG:'Shanghái', CAN:'Guangzhou',
+  BCN:'Barcelona', MAD:'Madrid', LHR:'Londres',
+  NRT:'Tokio', KIX:'Osaka', BKK:'Bangkok', SIN:'Singapur',
+};
+
+const ROUTE_COLORS = ['#00FF88','#00BBFF','#FF6B6B','#FFD93D','#BB88FF','#FF88BB'];
+
+const CHART_BASE = {
+  borderWidth: 2, pointRadius: 5, pointHoverRadius: 8,
+  tension: 0.3, fill: false, spanGaps: false,
+};
+
+const CHART_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { labels: { color: '#EDEFF2', font: { size: 11 }, boxWidth: 12, padding: 14 } },
+    tooltip: {
+      backgroundColor: '#1A2332', borderColor: '#2A3A4A', borderWidth: 1,
+      titleColor: '#EDEFF2', bodyColor: '#6A7A8A',
+      callbacks: { label: c => `  ${c.dataset.label}: €${c.parsed.y.toLocaleString('es-ES')}` },
+    },
+  },
+  scales: {
+    x: {
+      ticks: { color: '#6A7A8A', font: { size: 10 }, maxTicksLimit: 25 },
+      grid:  { color: '#1A2332' },
+      border:{ color: '#2A3A4A' },
+    },
+    y: {
+      ticks: { color: '#6A7A8A', font: { size: 10 }, callback: v => `€${v.toLocaleString('es-ES')}` },
+      grid:  { color: '#1A2332' },
+      border:{ color: '#2A3A4A' },
+    },
+  },
+};
+
+// ── Globals ───────────────────────────────────────────────────────────────────
+let allRows   = [];
+let config    = null;
+let activeTrip = null;
+let charts    = {};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines   = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const vals = line.split(',');
+    return Object.fromEntries(headers.map((h, i) => [h, (vals[i] || '').trim()]));
+  });
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  const [, m, d] = s.split('-');
+  const months = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${parseInt(d)} ${months[parseInt(m)]}`;
+}
+
+function fmtFlightDate(s) {
+  if (!s) return s;
+  const [y, m, d] = s.split('-');
+  const months = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${parseInt(d)} ${months[parseInt(m)]} ${y}`;
+}
+
+function fmtDuration(m) {
+  m = parseInt(m) || 0;
+  return `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}m`;
+}
+
+function iata(code) { return IATA[code] || code; }
+
+// Mejor precio por (trip_id, type, flight_date) agrupado por fecha de scraping
+function buildSeries(rows, tripId) {
+  const best = {};
+  for (const row of rows) {
+    const tid = row.trip_id || 'default';
+    if (tid !== tripId) continue;
+    const key   = `${row.type}|${row.flight_date}`;
+    const sdate = row.date;
+    const price = parseFloat(row.price_eur);
+    if (!best[key]) best[key] = {};
+    if (!(sdate in best[key]) || price < best[key][sdate]) best[key][sdate] = price;
+  }
+  const series = {};
+  for (const [k, map] of Object.entries(best)) {
+    series[k] = Object.entries(map).sort(([a],[b]) => a.localeCompare(b));
+  }
+  return series;
+}
+
+function buildCombos(series, tripCfg) {
+  const outKeys = tripCfg.outbound.dates.map(d => `outbound|${d}`);
+  const retKeys = tripCfg.return.dates.map(d => `return|${d}`);
+  const allDates = new Set([
+    ...Object.values(series).flat().map(([d]) => d)
+  ]);
+  return [...allDates].sort().map(date => {
+    const outPrices = outKeys.map(k => series[k]?.find(([d]) => d === date)?.[1]).filter(p => p != null);
+    const retPrices = retKeys.map(k => series[k]?.find(([d]) => d === date)?.[1]).filter(p => p != null);
+    if (!outPrices.length || !retPrices.length) return null;
+    const bestOut = Math.min(...outPrices);
+    const bestRet = Math.min(...retPrices);
+    return { date, price: bestOut + bestRet, out: bestOut, ret: bestRet };
+  }).filter(Boolean);
+}
+
+function trendStr(pts) {
+  if (!pts || pts.length < 2) return null;
+  const last = pts[pts.length - 1][1];
+  const prev = pts[pts.length - 2][1];
+  const pct  = ((last - prev) / prev * 100).toFixed(1);
+  if (last > prev) return { text: `▲ +${pct}%`, cls: 'up' };
+  if (last < prev) return { text: `▼ ${pct}%`, cls: 'down' };
+  return { text: '→ sin cambio', cls: 'flat' };
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function makeChart(canvasId, datasets, compact) {
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  const allDates = [...new Set(datasets.flatMap(ds => ds._dates))].sort();
+  const labels   = allDates.map(fmtDate);
+
+  const chartDatasets = datasets.map(ds => ({
+    label: ds.label,
+    data:  allDates.map(d => {
+      const idx = ds._dates.indexOf(d);
+      return idx >= 0 ? ds._prices[idx] : null;
+    }),
+    borderColor:       ds.color,
+    backgroundColor:   ds.color + '22',
+    pointBackgroundColor: ds.color,
+    ...CHART_BASE,
+    pointRadius: compact ? 4 : 5,
+  }));
+
+  const opts = JSON.parse(JSON.stringify(CHART_OPTS));
+  if (compact) {
+    opts.plugins.legend.display = false;
+    opts.scales.x.ticks.maxTicksLimit = 10;
+  }
+
+  charts[canvasId] = new Chart(ctx, { type: 'line', data: { labels, datasets: chartDatasets }, options: opts });
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderTrip(tripId) {
+  activeTrip = tripId;
+
+  // Highlight active tab
+  document.querySelectorAll('.trip-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.id === tripId);
+  });
+
+  const tripCfg = config.trips.find(t => t.id === tripId);
+  const series  = buildSeries(allRows, tripId);
+  const combos  = buildCombos(series, tripCfg);
+
+  // ── Combo hero ──
+  if (combos.length) {
+    const latest = combos[combos.length - 1];
+    document.getElementById('combo-price').textContent  = `€${latest.price.toLocaleString('es-ES')}`;
+    document.getElementById('combo-detail').textContent =
+      `IDA €${latest.out.toLocaleString('es-ES')} + VUELTA €${latest.ret.toLocaleString('es-ES')}`;
+
+    const ct = trendStr(combos.map(c => [c.date, c.price]));
+    const ctEl = document.getElementById('combo-trend');
+    if (ct) { ctEl.textContent = ct.text; ctEl.className = `combo-trend ${ct.cls}`; }
+
+    makeChart('chart-combo', [{
+      label: 'Combo', color: '#FFD93D',
+      _dates: combos.map(c => c.date),
+      _prices: combos.map(c => c.price),
+    }], true);
+  }
+
+  // ── Stat cards ──
+  const outKeys = tripCfg.outbound.dates.map(d => `outbound|${d}`);
+  const retKeys = tripCfg.return.dates.map(d => `return|${d}`);
+  const cardDefs = [
+    ...outKeys.map((k, i) => ({ key: k, label: `IDA · ${fmtFlightDate(tripCfg.outbound.dates[i])}`, tagCls: 'tag-out' })),
+    ...retKeys.map((k, i) => ({ key: k, label: `VUELTA · ${fmtFlightDate(tripCfg.return.dates[i])}`, tagCls: 'tag-ret' })),
+  ];
+
+  document.getElementById('cards').innerHTML = cardDefs.map(({ key, label, tagCls }) => {
+    const pts    = series[key] || [];
+    const latest = pts.length ? pts[pts.length - 1][1] : null;
+    const trend  = trendStr(pts);
+    return `<div class="card">
+      <div class="card-label ${tagCls}">${label}</div>
+      <div class="card-price">${latest != null ? '€' + latest.toLocaleString('es-ES') : '—'}</div>
+      <div class="card-sub">${pts.length} día${pts.length !== 1 ? 's' : ''} de histórico</div>
+      ${trend ? `<div class="card-trend ${trend.cls}">${trend.text}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // ── Outbound chart ──
+  const outDests = tripCfg.outbound.destinations.map(d => iata(d)).join(' / ');
+  document.getElementById('out-title').textContent =
+    `${iata(tripCfg.outbound.origin)} → ${outDests}`;
+
+  const outDatasets = outKeys.map((k, i) => {
+    const pts = series[k] || [];
+    return {
+      label: fmtFlightDate(tripCfg.outbound.dates[i]),
+      color: ROUTE_COLORS[i % ROUTE_COLORS.length],
+      _dates:  pts.map(([d]) => d),
+      _prices: pts.map(([, p]) => p),
+    };
+  }).filter(ds => ds._dates.length);
+  if (outDatasets.length) makeChart('chart-outbound', outDatasets, false);
+
+  // ── Return chart ──
+  const retOrigs = tripCfg.return.origins.map(d => iata(d)).join(' / ');
+  document.getElementById('ret-title').textContent =
+    `${retOrigs} → ${iata(tripCfg.return.destination)}`;
+
+  const retDatasets = retKeys.map((k, i) => {
+    const pts = series[k] || [];
+    return {
+      label: fmtFlightDate(tripCfg.return.dates[i]),
+      color: ROUTE_COLORS[(i + 2) % ROUTE_COLORS.length],
+      _dates:  pts.map(([d]) => d),
+      _prices: pts.map(([, p]) => p),
+    };
+  }).filter(ds => ds._dates.length);
+  if (retDatasets.length) makeChart('chart-return', retDatasets, false);
+
+  // ── Table ──
+  renderTable(tripId);
+}
+
+function renderTable(tripId) {
+  const filterType  = document.getElementById('filter-type').value;
+  const filterStops = document.getElementById('filter-stops').value;
+
+  const filtered = allRows
+    .filter(r => (r.trip_id || 'default') === tripId)
+    .filter(r => !filterType  || r.type === filterType)
+    .filter(r => filterStops === '' || parseInt(r.stops) <= parseInt(filterStops))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.flight_date.localeCompare(a.flight_date))
+    .slice(0, 30);
+
+  document.getElementById('table-title').textContent = `últimas ${filtered.length} entradas`;
+
+  const levelBadge = l => {
+    const map = { low: ['badge-low','🟢 BAJO'], typical: ['badge-typical','🟡 TÍPICO'], high: ['badge-high','🔴 ALTO'] };
+    const [cls, txt] = map[l?.toLowerCase()] || ['badge-none','⚪ —'];
+    return `<span class="badge ${cls}">${txt}</span>`;
+  };
+
+  document.getElementById('table-body').innerHTML = filtered.map(r => `
+    <tr>
+      <td class="mono">${r.date}</td>
+      <td>${r.type === 'outbound'
+        ? '<span class="tag-out">IDA</span>'
+        : '<span class="tag-ret">VUELTA</span>'}</td>
+      <td>${iata(r.origin)} → ${iata(r.destination)}</td>
+      <td class="mono">${r.flight_date}</td>
+      <td class="price-cell">€${parseFloat(r.price_eur).toLocaleString('es-ES')}</td>
+      <td class="mono">${r.stops}</td>
+      <td style="font-size:.75rem">${r.airline}</td>
+      <td class="mono">${fmtDuration(r.duration_m)}</td>
+      <td>${levelBadge(r.price_level)}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Config panel ──────────────────────────────────────────────────────────────
+function toggleConfig() {
+  const toggle = document.getElementById('config-toggle');
+  const body   = document.getElementById('config-body');
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+function renderConfigHint() {
+  if (!config) return;
+  const hint = JSON.stringify(config, null, 2);
+  document.getElementById('config-hint').textContent = hint;
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+async function main() {
+  try {
+    const [csvResp, cfgResp] = await Promise.all([
+      fetch(CSV_URL + '?t=' + Date.now()),
+      fetch(CFG_URL + '?t=' + Date.now()),
+    ]);
+
+    if (!csvResp.ok) throw new Error(`CSV: HTTP ${csvResp.status}`);
+    if (!cfgResp.ok) throw new Error(`Config: HTTP ${cfgResp.status}`);
+
+    allRows = parseCSV(await csvResp.text());
+    config  = await cfgResp.json();
+
+    if (!allRows.length) throw new Error('CSV vacío — ejecuta el script primero');
+    if (!config.trips?.length) throw new Error('config.json sin viajes');
+
+    // Header meta
+    const dates = allRows.map(r => r.date).sort();
+    document.getElementById('last-update').textContent  = `Actualizado: ${fmtDate(dates[dates.length - 1])}`;
+    document.getElementById('data-points').textContent  = `${allRows.length} registros`;
+
+    // Build trip tabs
+    const tabsEl = document.getElementById('trip-tabs');
+    tabsEl.innerHTML = config.trips.map(t =>
+      `<div class="trip-tab" data-id="${t.id}" onclick="renderTrip('${t.id}')">${t.name}</div>`
+    ).join('');
+
+    // Config hint
+    renderConfigHint();
+
+    // Table filters
+    document.getElementById('filter-type').addEventListener('change', () => renderTable(activeTrip));
+    document.getElementById('filter-stops').addEventListener('change', () => renderTable(activeTrip));
+
+    // Show app, render first trip
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display     = 'block';
+    renderTrip(config.trips[0].id);
+
+  } catch (e) {
+    document.getElementById('loading').style.display   = 'none';
+    const errEl = document.getElementById('error-msg');
+    errEl.style.display = 'block';
+    errEl.innerHTML = `
+      <div class="err-title">Error cargando datos</div>
+      <div class="err-detail">${e.message}<br><br>
+        Asegúrate de que el repo es público y los archivos<br>
+        <code>data/prices.csv</code> y <code>config.json</code> existen en la rama main.
+      </div>`;
+  }
+}
+
+main();
+</script>
+</body>
+</html>

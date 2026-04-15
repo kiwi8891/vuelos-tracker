@@ -1,0 +1,29 @@
+{
+  "passengers": {
+    "adults": 2,
+    "children": 2,
+    "infants_on_lap": 0
+  },
+  "alerts": {
+    "own_alert_pct": 0.05,
+    "own_min_samples": 3
+  },
+  "trips": [
+    {
+      "id": "asia-oct-2026",
+      "name": "Asia Octubre 2026",
+      "outbound": {
+        "origin": "BCN",
+        "destinations": ["ICN", "TPE", "HKG"],
+        "dates": ["2026-10-01", "2026-10-02"],
+        "max_stops": null
+      },
+      "return": {
+        "origins": ["PEK", "PVG", "CAN"],
+        "destination": "BCN",
+        "dates": ["2026-10-16", "2026-10-17"],
+        "max_stops": null
+      }
+    }
+  ]
+}

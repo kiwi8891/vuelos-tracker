@@ -24,6 +24,22 @@
         "dates": ["2026-10-16", "2026-10-17"],
         "max_stops": null
       }
+    },
+    {
+      "id": "asia-oct-2026-directo",
+      "name": "Asia Oct 2026 — Directo",
+      "outbound": {
+        "origin": "BCN",
+        "destinations": ["ICN", "TPE", "HKG"],
+        "dates": ["2026-10-01"],
+        "max_stops": 0
+      },
+      "return": {
+        "origins": ["PEK", "PVG", "CAN"],
+        "destination": "BCN",
+        "dates": ["2026-10-16"],
+        "max_stops": 0
+      }
     }
   ]
 }

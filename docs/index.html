@@ -4,331 +4,705 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vuelos Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg:       #0B0F14;
-      --surface:  #141B24;
-      --surface2: #1A2332;
-      --border:   #2A3A4A;
-      --text:     #EDEFF2;
-      --muted:    #6A7A8A;
-      --green:    #00FF88;
-      --blue:     #00BBFF;
-      --red:      #FF6B6B;
-      --yellow:   #FFD93D;
-      --purple:   #BB88FF;
+      --bg:       #000000;
+      --surface:  #141414;
+      --surface2: #1a1a1a;
+      --border:   rgba(65,65,65,0.8);
+      --border2:  #343434;
+      --text:     #ffffff;
+      --muted:    #a0a0a0;
+      --accent:   #faff69;
+      --accent2:  #f4f692;
+      --green:    #166534;
+      --red:      #ff4444;
+      --near-black: #141414;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       min-height: 100vh;
-      padding: 20px 24px 48px;
-      max-width: 1100px;
-      margin: 0 auto;
+      padding: 0 0 64px;
     }
 
     /* ── Header ── */
     header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      background: rgba(0,0,0,0.92);
+      backdrop-filter: blur(8px);
+      z-index: 100;
     }
-    .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: .06em; }
-    .logo span { color: var(--green); }
-    .header-meta { color: var(--muted); font-size: .75rem; font-family: monospace; text-align: right; }
+
+    .logo {
+      font-size: .875rem;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-mark {
+      width: 22px;
+      height: 22px;
+      background: var(--accent);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-mark svg { width: 12px; height: 12px; }
+
+    .logo-text { color: var(--text); }
+    .logo-text span { color: var(--accent); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .header-meta {
+      font-size: .75rem;
+      font-weight: 500;
+      letter-spacing: .4px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .header-meta strong { color: var(--accent); }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: blink 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .3; }
+    }
+
+    /* ── Main content ── */
+    .main {
+      padding: 32px 32px 0;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
     /* ── Trip tabs ── */
     .trip-tabs {
       display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
     }
-    .trip-tab {
-      padding: 6px 16px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--muted);
-      font-size: .8rem;
-      cursor: pointer;
-      transition: all .15s;
-      font-family: monospace;
-      letter-spacing: .04em;
-    }
-    .trip-tab:hover { border-color: var(--blue); color: var(--blue); }
-    .trip-tab.active { background: var(--blue); border-color: var(--blue); color: #000; font-weight: 700; }
 
-    /* ── Cards ── */
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 18px;
-    }
-    .card-label {
-      font-size: .68rem;
+    .trip-tab {
+      padding: 10px 18px;
+      border-radius: 4px 4px 0 0;
+      border: 1px solid transparent;
+      border-bottom: none;
+      background: transparent;
       color: var(--muted);
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
-      letter-spacing: .1em;
-      font-family: monospace;
-      margin-bottom: 6px;
+      cursor: pointer;
+      transition: color .15s, background .15s;
+      position: relative;
+      bottom: -1px;
     }
-    .card-price {
-      font-size: 1.9rem;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      color: var(--green);
-      line-height: 1;
+
+    .trip-tab:hover { color: var(--text); }
+
+    .trip-tab.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
     }
-    .card-pax {
-      font-size: .85rem;
-      font-variant-numeric: tabular-nums;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-    .card-pax span { color: var(--text); font-weight: 600; }
-    .card-sub { font-size: .72rem; color: var(--muted); margin-top: 5px; }
-    .card-trend { font-size: .78rem; margin-top: 8px; font-variant-numeric: tabular-nums; }
-    .up   { color: var(--red); }
-    .down { color: var(--green); }
-    .flat { color: var(--muted); }
 
     /* ── Combo hero ── */
     .combo-hero {
-      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 22px;
-      margin-bottom: 16px;
-      display: flex;
-      justify-content: space-between;
+      border-radius: 8px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 32px;
       align-items: center;
-      gap: 16px;
+      background: var(--surface);
+      box-shadow: rgba(0,0,0,0.06) 0px 4px 4px, rgba(0,0,0,0.14) 0px 4px 25px inset;
     }
+
+    .combo-left {}
+
+    .combo-eyebrow {
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
     .combo-price {
-      font-size: 2.6rem;
-      font-weight: 800;
-      color: var(--yellow);
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: var(--accent);
       font-variant-numeric: tabular-nums;
       line-height: 1;
+      letter-spacing: -1px;
     }
+
     .combo-pax {
-      font-size: .95rem;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 6px;
       font-variant-numeric: tabular-nums;
+    }
+
+    .combo-pax strong { color: var(--text); }
+
+    .combo-detail {
+      font-size: .75rem;
+      color: var(--muted);
+      margin-top: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .combo-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .combo-trend {
+      font-size: .8rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .combo-chart-wrap {
+      width: 280px;
+      height: 80px;
+      position: relative;
+    }
+
+    /* ── Stat cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 22px;
+      transition: border-color .15s;
+    }
+
+    .card:hover { border-color: rgba(250,255,105,0.4); }
+
+    .card-eyebrow {
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .eyebrow-out { color: var(--accent); }
+    .eyebrow-ret { color: var(--muted); }
+
+    .card-price {
+      font-size: 2rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: -.5px;
+    }
+
+    .card-pax {
+      font-size: .78rem;
+      font-weight: 500;
       color: var(--muted);
       margin-top: 4px;
+      font-variant-numeric: tabular-nums;
     }
-    .combo-pax span { color: var(--text); font-weight: 600; }
-    .combo-detail { color: var(--muted); font-size: .8rem; margin-top: 6px; }
-    .combo-label  { color: var(--muted); font-size: .7rem; font-family: monospace;
-                    text-transform: uppercase; letter-spacing: .08em; text-align: right; }
-    .combo-trend  { font-size: .85rem; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+    .card-pax strong { color: var(--accent2); }
+
+    .card-meta {
+      font-size: .7rem;
+      color: var(--border2);
+      margin-top: 10px;
+      letter-spacing: .3px;
+    }
+
+    .card-trend {
+      font-size: .78rem;
+      font-weight: 600;
+      margin-top: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .up   { color: var(--red); }
+    .down { color: var(--accent); }
+    .flat { color: var(--muted); }
 
     /* ── Sections ── */
     .section {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px 20px;
-      margin-bottom: 14px;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 12px;
     }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
     .section-title {
-      font-size: .72rem;
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
-      letter-spacing: .1em;
       color: var(--muted);
-      font-family: monospace;
-      margin-bottom: 14px;
     }
-    .section-title b { color: var(--text); font-weight: 600; }
+
+    .section-title strong { color: var(--text); }
+
     .chart-wrap { position: relative; height: 200px; }
-    .chart-wrap-sm { position: relative; height: 140px; }
 
     /* ── Table ── */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-    th {
-      text-align: left; color: var(--muted); font-weight: 400;
-      font-family: monospace; font-size: .68rem; text-transform: uppercase;
-      letter-spacing: .05em; padding: 6px 10px; border-bottom: 1px solid var(--border);
+    .table-filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
     }
-    td { padding: 8px 10px; border-bottom: 1px solid var(--surface2); vertical-align: middle; }
+
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: .75rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    select:focus { border-color: var(--accent); }
+
+    .table-wrap { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+
+    th {
+      text-align: left;
+      font-size: .65rem;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 6px 12px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(65,65,65,0.3);
+      vertical-align: middle;
+      color: var(--muted);
+    }
+
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--surface2); }
+
+    tr:hover td { background: rgba(250,255,105,0.03); }
+
+    .td-price {
+      color: var(--text);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .td-pax {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-size: .73rem;
+    }
+
+    .td-mono {
+      font-family: 'Inconsolata', 'Courier New', monospace;
+      font-size: .75rem;
+    }
+
+    .td-route { color: var(--text); font-weight: 500; }
 
     .badge {
-      display: inline-block; padding: 2px 8px; border-radius: 4px;
-      font-size: .68rem; font-family: monospace; white-space: nowrap;
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: .65rem;
+      font-weight: 600;
+      letter-spacing: .6px;
+      white-space: nowrap;
     }
-    .badge-low     { background: rgba(0,255,136,.12); color: var(--green); }
-    .badge-typical { background: rgba(255,217,61,.12); color: var(--yellow); }
-    .badge-high    { background: rgba(255,107,107,.12); color: var(--red); }
-    .badge-none    { background: rgba(106,122,138,.1);  color: var(--muted); }
-    .tag-out  { color: var(--blue);   font-size: .7rem; font-family: monospace; }
-    .tag-ret  { color: var(--yellow); font-size: .7rem; font-family: monospace; }
-    .mono     { font-family: monospace; font-size: .75rem; color: var(--muted); }
-    .price-cell { color: var(--green); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .badge-low     { background: rgba(250,255,105,.12); color: var(--accent);  border: 1px solid rgba(250,255,105,.2); }
+    .badge-typical { background: rgba(160,160,160,.08); color: var(--muted);   border: 1px solid var(--border); }
+    .badge-high    { background: rgba(255,68,68,.1);    color: var(--red);     border: 1px solid rgba(255,68,68,.2); }
+    .badge-none    { background: transparent;           color: var(--border2); border: 1px solid var(--border2); }
+
+    .tag-out {
+      display: inline-block;
+      font-size: .62rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #000;
+      background: var(--accent);
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+
+    .tag-ret {
+      display: inline-block;
+      font-size: .62rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
 
     /* ── Config panel ── */
     .config-section {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px 20px;
-      margin-bottom: 14px;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 12px;
     }
+
     .config-toggle {
-      display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
     }
-    .config-toggle span { font-size: .72rem; text-transform: uppercase;
-      letter-spacing: .1em; color: var(--muted); font-family: monospace; }
-    .config-toggle .chevron { color: var(--muted); transition: transform .2s; font-size: .9rem; }
-    .config-toggle.open .chevron { transform: rotate(180deg); }
+
+    .config-toggle-label {
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color .15s;
+    }
+
+    .config-toggle:hover .config-toggle-label { color: var(--text); }
+
+    .config-chevron {
+      font-size: .8rem;
+      color: var(--muted);
+      transition: transform .2s;
+    }
+
+    .config-toggle.open .config-chevron { transform: rotate(180deg); }
+
     .config-body { display: none; margin-top: 16px; }
     .config-body.open { display: block; }
+
     .config-hint {
-      background: var(--surface2); border-radius: 6px; padding: 14px 16px;
-      font-family: monospace; font-size: .78rem; line-height: 1.7;
-      color: var(--text); white-space: pre-wrap; word-break: break-all;
+      background: #000;
       border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px 18px;
+      font-family: 'Inconsolata', 'Courier New', monospace;
+      font-size: .8rem;
+      line-height: 1.7;
+      color: var(--muted);
+      white-space: pre-wrap;
+      word-break: break-all;
     }
-    .config-note { color: var(--muted); font-size: .75rem; margin-top: 10px; line-height: 1.5; }
 
-    /* ── States ── */
-    #loading { text-align: center; color: var(--muted); padding: 80px 20px;
-               font-family: monospace; font-size: .9rem; }
-    .pulse { display: inline-block; animation: pulse 1.2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
-    #error-msg { text-align: center; padding: 60px 20px; }
-    #error-msg .err-title { color: var(--red); font-size: 1rem; margin-bottom: 8px; }
-    #error-msg .err-detail { color: var(--muted); font-size: .8rem; line-height: 1.6; }
+    .config-hint .json-key   { color: var(--accent2); }
+    .config-hint .json-str   { color: var(--muted); }
+    .config-hint .json-num   { color: var(--text); }
+    .config-hint .json-bool  { color: var(--accent); }
 
-    @media (max-width: 600px) {
-      body { padding: 12px 14px 32px; }
-      .combo-hero { flex-direction: column; align-items: flex-start; }
-      .combo-price { font-size: 2rem; }
+    .config-note {
+      margin-top: 12px;
+      font-size: .75rem;
+      color: var(--muted);
+      line-height: 1.6;
+      border-left: 2px solid var(--accent);
+      padding-left: 12px;
+    }
+
+    .config-note code {
+      font-family: 'Inconsolata', 'Courier New', monospace;
+      color: var(--accent2);
+      font-size: .8rem;
+    }
+
+    /* ── Loading / Error ── */
+    #loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      gap: 16px;
+    }
+
+    .loader-text {
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .loader-bar {
+      width: 200px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .loader-bar::after {
+      content: '';
+      position: absolute;
+      left: -40%;
+      width: 40%;
+      height: 100%;
+      background: var(--accent);
+      animation: scan 1.2s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+      to { left: 100%; }
+    }
+
+    #error-msg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      gap: 8px;
+      text-align: center;
+      padding: 32px;
+    }
+
+    .err-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--red);
+      letter-spacing: .5px;
+    }
+
+    .err-detail {
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 400px;
+    }
+
+    .err-detail code {
+      font-family: monospace;
+      color: var(--accent2);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      header { padding: 0 16px; }
+      .main { padding: 20px 16px 0; }
+      .combo-hero { grid-template-columns: 1fr; }
+      .combo-right { align-items: flex-start; }
+      .combo-chart-wrap { width: 100%; }
+      .combo-price { font-size: 2.5rem; }
+    }
+
+    @media (max-width: 480px) {
+      .trip-tab { padding: 8px 12px; font-size: .65rem; }
     }
   </style>
 </head>
 <body>
 
-<div id="loading"><span class="pulse">⟳</span> Cargando datos…</div>
+<!-- Loading -->
+<div id="loading">
+  <div class="loader-bar"></div>
+  <div class="loader-text">Cargando datos</div>
+</div>
+
+<!-- Error -->
 <div id="error-msg" style="display:none"></div>
+
+<!-- App -->
 <div id="app" style="display:none">
 
   <header>
-    <div class="logo">✈ VUELOS <span>TRACKER</span></div>
-    <div class="header-meta">
-      <div id="last-update"></div>
-      <div id="data-points"></div>
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 12 12" fill="none">
+          <path d="M2 2h3v8H2zM7 2h3v4H7z" fill="#000"/>
+        </svg>
+      </div>
+      <div class="logo-text">VUELOS <span>TRACKER</span></div>
+    </div>
+    <div class="header-right">
+      <div class="header-meta" id="header-meta"></div>
+      <div class="status-dot"></div>
     </div>
   </header>
 
-  <div class="trip-tabs" id="trip-tabs"></div>
+  <div class="main">
 
-  <!-- Combo hero -->
-  <div class="combo-hero" id="combo-hero">
-    <div>
-      <div class="combo-price" id="combo-price">—</div>
-      <div class="combo-pax" id="combo-pax"></div>
-      <div class="combo-detail" id="combo-detail"></div>
-    </div>
-    <div>
-      <div class="combo-label">Mejor combo hoy</div>
-      <div class="combo-trend" id="combo-trend"></div>
-      <div class="chart-wrap-sm" style="width:260px; margin-top:10px">
-        <canvas id="chart-combo"></canvas>
+    <div class="trip-tabs" id="trip-tabs"></div>
+
+    <!-- Combo hero -->
+    <div class="combo-hero">
+      <div class="combo-left">
+        <div class="combo-eyebrow">Mejor combo · IDA + VUELTA</div>
+        <div class="combo-price" id="combo-price">—</div>
+        <div class="combo-pax" id="combo-pax"></div>
+        <div class="combo-detail" id="combo-detail"></div>
+      </div>
+      <div class="combo-right">
+        <div class="combo-trend" id="combo-trend"></div>
+        <div class="combo-chart-wrap">
+          <canvas id="chart-combo"></canvas>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Stat cards -->
-  <div class="cards" id="cards"></div>
+    <!-- Stat cards -->
+    <div class="cards" id="cards"></div>
 
-  <!-- Outbound chart -->
-  <div class="section">
-    <div class="section-title">IDA — <b id="out-title"></b></div>
-    <div class="chart-wrap"><canvas id="chart-outbound"></canvas></div>
-  </div>
-
-  <!-- Return chart -->
-  <div class="section">
-    <div class="section-title">VUELTA — <b id="ret-title"></b></div>
-    <div class="chart-wrap"><canvas id="chart-return"></canvas></div>
-  </div>
-
-  <!-- History table -->
-  <div class="section">
-    <div class="section-title">HISTORIAL — <b id="table-title">últimas 20 entradas</b></div>
-    <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap">
-      <select id="filter-type" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;font-size:.78rem;">
-        <option value="">Todos los tipos</option>
-        <option value="outbound">Solo IDA</option>
-        <option value="return">Solo VUELTA</option>
-      </select>
-      <select id="filter-stops" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;font-size:.78rem;">
-        <option value="">Todas las escalas</option>
-        <option value="0">Directos (0 esc)</option>
-        <option value="1">Máx 1 escala</option>
-      </select>
+    <!-- Outbound chart -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">IDA — <strong id="out-title"></strong></div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-outbound"></canvas></div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Scraping</th>
-            <th>Tipo</th>
-            <th>Ruta</th>
-            <th>Vuelo</th>
-            <th>Precio total</th>
-      <th>/pers</th>
-            <th>Esc</th>
-            <th>Aerolínea</th>
-            <th>Duración</th>
-            <th>Google</th>
-          </tr>
-        </thead>
-        <tbody id="table-body"></tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- Config panel -->
-  <div class="config-section">
-    <div class="config-toggle" id="config-toggle" onclick="toggleConfig()">
-      <span>Cómo añadir / modificar búsquedas</span>
-      <span class="chevron">▾</span>
+    <!-- Return chart -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">VUELTA — <strong id="ret-title"></strong></div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-return"></canvas></div>
     </div>
-    <div class="config-body" id="config-body">
-      <div class="config-hint" id="config-hint"></div>
-      <div class="config-note">
-        Edita <code>config.json</code> en el repo, haz commit y push.<br>
-        El script se ejecutará con la nueva configuración en el siguiente cron (09:00 CET)<br>
-        o puedes lanzarlo manualmente: <code>Actions → Run workflow</code>.<br><br>
-        Para vuelos directos: <code>"max_stops": 0</code> en outbound o return.<br>
-        Para añadir un viaje nuevo: copia el bloque y cámbialo.
+
+    <!-- History table -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">HISTORIAL — <strong id="table-title"></strong></div>
+      </div>
+      <div class="table-filters">
+        <select id="filter-type">
+          <option value="">Todos los tipos</option>
+          <option value="outbound">Solo IDA</option>
+          <option value="return">Solo VUELTA</option>
+        </select>
+        <select id="filter-stops">
+          <option value="">Todas las escalas</option>
+          <option value="0">Solo directos</option>
+          <option value="1">Máx 1 escala</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Ruta</th>
+              <th>Vuelo</th>
+              <th>Total</th>
+              <th>/pers</th>
+              <th>Esc</th>
+              <th>Aerolínea</th>
+              <th>Dur</th>
+              <th>Google</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
       </div>
     </div>
-  </div>
 
-</div>
+    <!-- Config panel -->
+    <div class="config-section">
+      <div class="config-toggle" id="config-toggle" onclick="toggleConfig()">
+        <span class="config-toggle-label">Añadir / modificar búsquedas</span>
+        <span class="config-chevron">▾</span>
+      </div>
+      <div class="config-body" id="config-body">
+        <div class="config-hint" id="config-hint"></div>
+        <div class="config-note">
+          Edita <code>config.json</code>, haz commit y push — el cron lo ejecuta a las 09:00 CET.<br>
+          Para búsqueda inmediata: <code>Actions → Run workflow</code> en GitHub.<br>
+          Vuelos directos: <code>"max_stops": 0</code> · Nuevo viaje: añade un bloque en <code>"trips"</code>.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
 
 <script>
-// ── Constantes ────────────────────────────────────────────────────────────────
 const REPO    = 'kiwi8891/vuelos-tracker';
 const CSV_URL = `https://raw.githubusercontent.com/${REPO}/main/data/prices.csv`;
 const CFG_URL = `https://raw.githubusercontent.com/${REPO}/main/config.json`;
@@ -340,47 +714,72 @@ const IATA = {
   NRT:'Tokio', KIX:'Osaka', BKK:'Bangkok', SIN:'Singapur',
 };
 
-const ROUTE_COLORS = ['#00FF88','#00BBFF','#FF6B6B','#FFD93D','#BB88FF','#FF88BB'];
+// ClickHouse-inspired chart palette
+const ROUTE_COLORS = ['#faff69','#ffffff','#f4f692','#a0a0a0','#faff69','#ffffff'];
 
 const CHART_BASE = {
   borderWidth: 2, pointRadius: 5, pointHoverRadius: 8,
   tension: 0.3, fill: false, spanGaps: false,
 };
 
-const CHART_OPTS = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: { mode: 'index', intersect: false },
-  plugins: {
-    legend: { labels: { color: '#EDEFF2', font: { size: 11 }, boxWidth: 12, padding: 14 } },
-    tooltip: {
-      backgroundColor: '#1A2332', borderColor: '#2A3A4A', borderWidth: 1,
-      titleColor: '#EDEFF2', bodyColor: '#6A7A8A',
-      callbacks: { label: c => `  ${c.dataset.label}: €${c.parsed.y.toLocaleString('es-ES')}` },
+function chartOpts(compact) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        display: !compact,
+        labels: {
+          color: '#a0a0a0',
+          font: { size: 11, weight: '600', family: 'Inter' },
+          boxWidth: 10,
+          padding: 16,
+          usePointStyle: true,
+          pointStyleWidth: 10,
+        }
+      },
+      tooltip: {
+        backgroundColor: '#141414',
+        borderColor: 'rgba(65,65,65,0.8)',
+        borderWidth: 1,
+        titleColor: '#ffffff',
+        bodyColor: '#a0a0a0',
+        padding: 12,
+        callbacks: {
+          label: c => `  ${c.dataset.label}: €${c.parsed.y.toLocaleString('es-ES')}`,
+        }
+      }
     },
-  },
-  scales: {
-    x: {
-      ticks: { color: '#6A7A8A', font: { size: 10 }, maxTicksLimit: 25 },
-      grid:  { color: '#1A2332' },
-      border:{ color: '#2A3A4A' },
+    scales: {
+      x: {
+        ticks: {
+          color: '#a0a0a0',
+          font: { size: 10, weight: '500', family: 'Inter' },
+          maxTicksLimit: 20,
+        },
+        grid:  { color: 'rgba(65,65,65,0.3)' },
+        border:{ color: 'rgba(65,65,65,0.8)' },
+      },
+      y: {
+        ticks: {
+          color: '#a0a0a0',
+          font: { size: 10, weight: '500', family: 'Inter' },
+          callback: v => `€${v.toLocaleString('es-ES')}`,
+        },
+        grid:  { color: 'rgba(65,65,65,0.3)' },
+        border:{ color: 'rgba(65,65,65,0.8)' },
+      },
     },
-    y: {
-      ticks: { color: '#6A7A8A', font: { size: 10 }, callback: v => `€${v.toLocaleString('es-ES')}` },
-      grid:  { color: '#1A2332' },
-      border:{ color: '#2A3A4A' },
-    },
-  },
-};
+  };
+}
 
-// ── Globals ───────────────────────────────────────────────────────────────────
 let allRows    = [];
 let config     = null;
 let activeTrip = null;
 let totalPax   = 4;
 let charts     = {};
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function parseCSV(text) {
   const lines   = text.trim().split('\n');
   const headers = lines[0].split(',').map(h => h.trim());
@@ -388,10 +787,6 @@ function parseCSV(text) {
     const vals = line.split(',');
     return Object.fromEntries(headers.map((h, i) => [h, (vals[i] || '').trim()]));
   });
-}
-
-function perPax(total) {
-  return Math.floor(total / totalPax).toLocaleString('es-ES');
 }
 
 function fmtDate(s) {
@@ -415,7 +810,10 @@ function fmtDuration(m) {
 
 function iata(code) { return IATA[code] || code; }
 
-// Mejor precio por (trip_id, type, flight_date) agrupado por fecha de scraping
+function perPax(total) {
+  return Math.floor(total / totalPax).toLocaleString('es-ES');
+}
+
 function buildSeries(rows, tripId) {
   const best = {};
   for (const row of rows) {
@@ -437,9 +835,7 @@ function buildSeries(rows, tripId) {
 function buildCombos(series, tripCfg) {
   const outKeys = tripCfg.outbound.dates.map(d => `outbound|${d}`);
   const retKeys = tripCfg.return.dates.map(d => `return|${d}`);
-  const allDates = new Set([
-    ...Object.values(series).flat().map(([d]) => d)
-  ]);
+  const allDates = new Set(Object.values(series).flat().map(([d]) => d));
   return [...allDates].sort().map(date => {
     const outPrices = outKeys.map(k => series[k]?.find(([d]) => d === date)?.[1]).filter(p => p != null);
     const retPrices = retKeys.map(k => series[k]?.find(([d]) => d === date)?.[1]).filter(p => p != null);
@@ -468,37 +864,28 @@ function makeChart(canvasId, datasets, compact) {
   destroyChart(canvasId);
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
-
   const allDates = [...new Set(datasets.flatMap(ds => ds._dates))].sort();
   const labels   = allDates.map(fmtDate);
-
   const chartDatasets = datasets.map(ds => ({
     label: ds.label,
-    data:  allDates.map(d => {
+    data: allDates.map(d => {
       const idx = ds._dates.indexOf(d);
       return idx >= 0 ? ds._prices[idx] : null;
     }),
-    borderColor:       ds.color,
-    backgroundColor:   ds.color + '22',
-    pointBackgroundColor: ds.color,
+    borderColor:          ds.color,
+    backgroundColor:      ds.color + '15',
+    pointBackgroundColor: '#000',
+    pointBorderColor:     ds.color,
+    pointBorderWidth:     2,
     ...CHART_BASE,
-    pointRadius: compact ? 4 : 5,
+    pointRadius: compact ? 3 : 5,
   }));
-
-  const opts = JSON.parse(JSON.stringify(CHART_OPTS));
-  if (compact) {
-    opts.plugins.legend.display = false;
-    opts.scales.x.ticks.maxTicksLimit = 10;
-  }
-
+  const opts = chartOpts(compact);
   charts[canvasId] = new Chart(ctx, { type: 'line', data: { labels, datasets: chartDatasets }, options: opts });
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
 function renderTrip(tripId) {
   activeTrip = tripId;
-
-  // Highlight active tab
   document.querySelectorAll('.trip-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.id === tripId);
   });
@@ -507,87 +894,71 @@ function renderTrip(tripId) {
   const series  = buildSeries(allRows, tripId);
   const combos  = buildCombos(series, tripCfg);
 
-  // ── Combo hero ──
+  // Combo hero
   if (combos.length) {
     const latest = combos[combos.length - 1];
     document.getElementById('combo-price').textContent = `€${latest.price.toLocaleString('es-ES')}`;
     document.getElementById('combo-pax').innerHTML =
-      `<span>€${perPax(latest.price)}/pers</span> · ${totalPax} personas`;
+      `<strong>€${perPax(latest.price)}/pers</strong> · ${totalPax} personas`;
     document.getElementById('combo-detail').textContent =
       `IDA €${latest.out.toLocaleString('es-ES')} + VUELTA €${latest.ret.toLocaleString('es-ES')}`;
-
     const ct = trendStr(combos.map(c => [c.date, c.price]));
     const ctEl = document.getElementById('combo-trend');
     if (ct) { ctEl.textContent = ct.text; ctEl.className = `combo-trend ${ct.cls}`; }
-
     makeChart('chart-combo', [{
-      label: 'Combo', color: '#FFD93D',
-      _dates: combos.map(c => c.date),
+      label: 'Combo',
+      color: '#faff69',
+      _dates:  combos.map(c => c.date),
       _prices: combos.map(c => c.price),
     }], true);
   }
 
-  // ── Stat cards ──
+  // Stat cards
   const outKeys = tripCfg.outbound.dates.map(d => `outbound|${d}`);
   const retKeys = tripCfg.return.dates.map(d => `return|${d}`);
   const cardDefs = [
-    ...outKeys.map((k, i) => ({ key: k, label: `IDA · ${fmtFlightDate(tripCfg.outbound.dates[i])}`, tagCls: 'tag-out' })),
-    ...retKeys.map((k, i) => ({ key: k, label: `VUELTA · ${fmtFlightDate(tripCfg.return.dates[i])}`, tagCls: 'tag-ret' })),
+    ...outKeys.map((k, i) => ({ key: k, label: `IDA · ${fmtFlightDate(tripCfg.outbound.dates[i])}`, cls: 'eyebrow-out' })),
+    ...retKeys.map((k, i) => ({ key: k, label: `VUELTA · ${fmtFlightDate(tripCfg.return.dates[i])}`, cls: 'eyebrow-ret' })),
   ];
 
-  document.getElementById('cards').innerHTML = cardDefs.map(({ key, label, tagCls }) => {
+  document.getElementById('cards').innerHTML = cardDefs.map(({ key, label, cls }) => {
     const pts    = series[key] || [];
     const latest = pts.length ? pts[pts.length - 1][1] : null;
     const trend  = trendStr(pts);
     return `<div class="card">
-      <div class="card-label ${tagCls}">${label}</div>
+      <div class="card-eyebrow ${cls}">${label}</div>
       <div class="card-price">${latest != null ? '€' + latest.toLocaleString('es-ES') : '—'}</div>
-      ${latest != null ? `<div class="card-pax"><span>€${perPax(latest)}/pers</span> · ${totalPax} pers</div>` : ''}
-      <div class="card-sub">${pts.length} día${pts.length !== 1 ? 's' : ''} de histórico</div>
+      ${latest != null ? `<div class="card-pax"><strong>€${perPax(latest)}/pers</strong> · ${totalPax} pers</div>` : ''}
+      <div class="card-meta">${pts.length} día${pts.length !== 1 ? 's' : ''} de histórico</div>
       ${trend ? `<div class="card-trend ${trend.cls}">${trend.text}</div>` : ''}
     </div>`;
   }).join('');
 
-  // ── Outbound chart ──
+  // Charts
   const outDests = tripCfg.outbound.destinations.map(d => iata(d)).join(' / ');
-  document.getElementById('out-title').textContent =
-    `${iata(tripCfg.outbound.origin)} → ${outDests}`;
-
+  document.getElementById('out-title').textContent = `${iata(tripCfg.outbound.origin)} → ${outDests}`;
   const outDatasets = outKeys.map((k, i) => {
     const pts = series[k] || [];
-    return {
-      label: fmtFlightDate(tripCfg.outbound.dates[i]),
-      color: ROUTE_COLORS[i % ROUTE_COLORS.length],
-      _dates:  pts.map(([d]) => d),
-      _prices: pts.map(([, p]) => p),
-    };
+    return { label: fmtFlightDate(tripCfg.outbound.dates[i]), color: ROUTE_COLORS[i],
+             _dates: pts.map(([d]) => d), _prices: pts.map(([, p]) => p) };
   }).filter(ds => ds._dates.length);
   if (outDatasets.length) makeChart('chart-outbound', outDatasets, false);
 
-  // ── Return chart ──
   const retOrigs = tripCfg.return.origins.map(d => iata(d)).join(' / ');
-  document.getElementById('ret-title').textContent =
-    `${retOrigs} → ${iata(tripCfg.return.destination)}`;
-
+  document.getElementById('ret-title').textContent = `${retOrigs} → ${iata(tripCfg.return.destination)}`;
   const retDatasets = retKeys.map((k, i) => {
     const pts = series[k] || [];
-    return {
-      label: fmtFlightDate(tripCfg.return.dates[i]),
-      color: ROUTE_COLORS[(i + 2) % ROUTE_COLORS.length],
-      _dates:  pts.map(([d]) => d),
-      _prices: pts.map(([, p]) => p),
-    };
+    return { label: fmtFlightDate(tripCfg.return.dates[i]), color: ROUTE_COLORS[i + 2],
+             _dates: pts.map(([d]) => d), _prices: pts.map(([, p]) => p) };
   }).filter(ds => ds._dates.length);
   if (retDatasets.length) makeChart('chart-return', retDatasets, false);
 
-  // ── Table ──
   renderTable(tripId);
 }
 
 function renderTable(tripId) {
   const filterType  = document.getElementById('filter-type').value;
   const filterStops = document.getElementById('filter-stops').value;
-
   const filtered = allRows
     .filter(r => (r.trip_id || 'default') === tripId)
     .filter(r => !filterType  || r.type === filterType)
@@ -595,96 +966,88 @@ function renderTable(tripId) {
     .sort((a, b) => b.date.localeCompare(a.date) || b.flight_date.localeCompare(a.flight_date))
     .slice(0, 30);
 
-  document.getElementById('table-title').textContent = `últimas ${filtered.length} entradas`;
+  document.getElementById('table-title').textContent = `${filtered.length} entradas`;
 
   const levelBadge = l => {
-    const map = { low: ['badge-low','🟢 BAJO'], typical: ['badge-typical','🟡 TÍPICO'], high: ['badge-high','🔴 ALTO'] };
-    const [cls, txt] = map[l?.toLowerCase()] || ['badge-none','⚪ —'];
+    const map = { low: ['badge-low','BAJO'], typical: ['badge-typical','TÍPICO'], high: ['badge-high','ALTO'] };
+    const [cls, txt] = map[l?.toLowerCase()] || ['badge-none','—'];
     return `<span class="badge ${cls}">${txt}</span>`;
   };
 
   document.getElementById('table-body').innerHTML = filtered.map(r => `
     <tr>
-      <td class="mono">${r.date}</td>
-      <td>${r.type === 'outbound'
-        ? '<span class="tag-out">IDA</span>'
-        : '<span class="tag-ret">VUELTA</span>'}</td>
-      <td>${iata(r.origin)} → ${iata(r.destination)}</td>
-      <td class="mono">${r.flight_date}</td>
-      <td class="price-cell">€${parseFloat(r.price_eur).toLocaleString('es-ES')}</td>
-      <td style="color:var(--muted);font-variant-numeric:tabular-nums">€${perPax(parseFloat(r.price_eur))}</td>
-      <td class="mono">${r.stops}</td>
-      <td style="font-size:.75rem">${r.airline}</td>
-      <td class="mono">${fmtDuration(r.duration_m)}</td>
+      <td class="td-mono">${r.date}</td>
+      <td>${r.type === 'outbound' ? '<span class="tag-out">IDA</span>' : '<span class="tag-ret">VTA</span>'}</td>
+      <td class="td-route">${iata(r.origin)} → ${iata(r.destination)}</td>
+      <td class="td-mono">${r.flight_date}</td>
+      <td class="td-price">€${parseFloat(r.price_eur).toLocaleString('es-ES')}</td>
+      <td class="td-pax">€${perPax(parseFloat(r.price_eur))}</td>
+      <td class="td-mono">${r.stops}</td>
+      <td style="font-size:.73rem">${r.airline}</td>
+      <td class="td-mono">${fmtDuration(r.duration_m)}</td>
       <td>${levelBadge(r.price_level)}</td>
     </tr>
   `).join('');
 }
 
-// ── Config panel ──────────────────────────────────────────────────────────────
 function toggleConfig() {
-  const toggle = document.getElementById('config-toggle');
-  const body   = document.getElementById('config-body');
-  toggle.classList.toggle('open');
-  body.classList.toggle('open');
+  document.getElementById('config-toggle').classList.toggle('open');
+  document.getElementById('config-body').classList.toggle('open');
 }
 
-function renderConfigHint() {
-  if (!config) return;
-  const hint = JSON.stringify(config, null, 2);
-  document.getElementById('config-hint').textContent = hint;
+function syntaxHighlight(json) {
+  return json
+    .replace(/(".*?")\s*:/g, '<span class="json-key">$1</span>:')
+    .replace(/:\s*(".*?")/g, ': <span class="json-str">$1</span>')
+    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+    .replace(/:\s*(true|false|null)/g, ': <span class="json-bool">$1</span>');
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function main() {
   try {
     const [csvResp, cfgResp] = await Promise.all([
       fetch(CSV_URL + '?t=' + Date.now()),
       fetch(CFG_URL + '?t=' + Date.now()),
     ]);
-
     if (!csvResp.ok) throw new Error(`CSV: HTTP ${csvResp.status}`);
     if (!cfgResp.ok) throw new Error(`Config: HTTP ${cfgResp.status}`);
 
-    allRows   = parseCSV(await csvResp.text());
-    config    = await cfgResp.json();
-    totalPax  = (config.passengers?.adults || 2) + (config.passengers?.children || 0);
+    allRows  = parseCSV(await csvResp.text());
+    config   = await cfgResp.json();
+    totalPax = (config.passengers?.adults || 2) + (config.passengers?.children || 0);
 
     if (!allRows.length) throw new Error('CSV vacío — ejecuta el script primero');
     if (!config.trips?.length) throw new Error('config.json sin viajes');
 
-    // Header meta
     const dates = allRows.map(r => r.date).sort();
-    document.getElementById('last-update').textContent  = `Actualizado: ${fmtDate(dates[dates.length - 1])}`;
-    document.getElementById('data-points').textContent  = `${allRows.length} registros`;
+    document.getElementById('header-meta').innerHTML =
+      `<strong>${fmtDate(dates[dates.length - 1])}</strong> · ${allRows.length} registros`;
 
-    // Build trip tabs
-    const tabsEl = document.getElementById('trip-tabs');
-    tabsEl.innerHTML = config.trips.map(t =>
+    // Trip tabs
+    document.getElementById('trip-tabs').innerHTML = config.trips.map(t =>
       `<div class="trip-tab" data-id="${t.id}" onclick="renderTrip('${t.id}')">${t.name}</div>`
     ).join('');
 
     // Config hint
-    renderConfigHint();
+    document.getElementById('config-hint').innerHTML =
+      syntaxHighlight(JSON.stringify(config, null, 2));
 
-    // Table filters
-    document.getElementById('filter-type').addEventListener('change', () => renderTable(activeTrip));
+    document.getElementById('filter-type').addEventListener('change',  () => renderTable(activeTrip));
     document.getElementById('filter-stops').addEventListener('change', () => renderTable(activeTrip));
 
-    // Show app, render first trip
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display     = 'block';
     renderTrip(config.trips[0].id);
 
   } catch (e) {
-    document.getElementById('loading').style.display   = 'none';
-    const errEl = document.getElementById('error-msg');
-    errEl.style.display = 'block';
-    errEl.innerHTML = `
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('error-msg');
+    el.style.display = 'block';
+    el.innerHTML = `
       <div class="err-title">Error cargando datos</div>
       <div class="err-detail">${e.message}<br><br>
-        Asegúrate de que el repo es público y los archivos<br>
-        <code>data/prices.csv</code> y <code>config.json</code> existen en la rama main.
+        Comprueba que el repo es público y que existen<br>
+        <code>data/prices.csv</code> y <code>config.json</code> en la rama main.
       </div>`;
   }
 }

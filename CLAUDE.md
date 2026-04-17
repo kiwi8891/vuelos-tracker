@@ -2,8 +2,8 @@
 
 ## Qué hace
 Monitorización diaria de precios de vuelo para un viaje familiar en octubre 2026.
-Ejecuta automáticamente cada día vía GitHub Actions, guarda historial en CSV y
-manda resumen + gráfica de evolución por Telegram.
+Ejecuta automáticamente cada día vía **launchd en Mac Mini local** (09:00h), guarda historial en CSV,
+hace git commit + push automático al repo, y manda resumen + gráfica de evolución por Telegram.
 Dashboard interactivo en GitHub Pages.
 
 ## Pasajeros
@@ -32,17 +32,18 @@ Definidas en `config.json`. Actualmente dos trips:
   - Multi-aeropuerto: `arrival_id="ICN,TPE,HKG"` = 1 sola llamada
   - `price_insights.price_level` de Google para detectar precios bajos
 - **Alertas**: Telegram Bot — resumen diario + gráfica PNG
-- **Historial**: `data/prices.csv` — commiteado automáticamente por GitHub Actions
+- **Historial**: `data/prices.csv` — commiteado y pusheado automáticamente por `flight_tracker.py` al final de cada ejecución
 - **Dashboard**: GitHub Pages → `docs/index.html` (ClickHouse design system)
-- **Automatización**: GitHub Actions cron `0 7 * * *` (09:00 CET)
+- **Automatización**: launchd en Mac Mini — `~/Library/LaunchAgents/com.gerardo.vuelostracker.plist` — 09:00h hora local
 
 ## Archivos clave
 - `config.json` — configuración de viajes, pasajeros y alertas (**editar aquí para cambiar búsquedas**)
-- `flight_tracker.py` — script principal, lee config.json
-- `.github/workflows/daily_check.yml` — cron de GitHub Actions
+- `flight_tracker.py` — script principal, lee config.json; al terminar hace git commit + push del CSV
+- `.github/workflows/daily_check.yml` — workflow de GitHub Actions (ya no se usa, conservado como backup)
 - `data/prices.csv` — historial de precios (columnas: date, trip_id, type, origin, destination, flight_date, price_eur, stops, airline, duration_m, price_level, typical_low, typical_high)
 - `docs/index.html` — dashboard GitHub Pages
 - `requirements.txt` — dependencias Python (incluye matplotlib)
+- `~/Library/LaunchAgents/com.gerardo.vuelostracker.plist` — agente launchd (Mac Mini, fuera del repo)
 
 ## Cómo añadir/modificar búsquedas
 Editar `config.json`. Estructura de un trip:
@@ -64,7 +65,10 @@ Editar `config.json`. Estructura de un trip:
   }
 }
 ```
-Commit + push → ejecuta automáticamente en el siguiente cron, o lanzar manualmente en GitHub Actions.
+Commit + push → ejecuta automáticamente en el siguiente cron (09:00h), o lanzar manualmente:
+```bash
+launchctl start com.gerardo.vuelostracker
+```
 
 ## Benchmarks de precio
 1. **Google**: `price_insights.price_level` = low / typical / high (puede estar vacío para fechas lejanas)
@@ -84,13 +88,14 @@ URL: https://kiwi8891.github.io/vuelos-tracker/
 - Panel de config con JSON resaltado
 - Diseño: ClickHouse design system (#000 + #faff69 neon volt)
 
-## Variables de entorno / Secrets de GitHub
+## Variables de entorno
 ```
 SERPAPI_KEY          # serpapi.com → dashboard
 TELEGRAM_BOT_TOKEN   # @BotFather en Telegram
 TELEGRAM_CHAT_ID     # @userinfobot en Telegram
 ```
-Los 3 secrets ya están configurados en el repo.
+Guardadas en `.env` (local, no commiteado) y en el plist de launchd (`EnvironmentVariables`).
+Los secrets de GitHub siguen configurados en el repo como backup.
 
 ## Para ejecutar localmente
 ```bash

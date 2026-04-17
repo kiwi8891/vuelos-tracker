@@ -15,12 +15,12 @@ Dashboard interactivo en GitHub Pages.
 Definidas en `config.json`. Actualmente dos trips:
 
 ### asia-oct-2026 (con escalas)
-- **IDA**: BCN → ICN (Seúl) / TPE (Taipei) / HKG (Hong Kong) — 1 y 2 oct 2026
+- **IDA**: BCN → ICN (Seúl) / TPE (Taipei) / HKG (Hong Kong) — 31 ago y 1 oct 2026
 - **VUELTA**: PEK (Pekín) / PVG (Shanghái) / CAN (Guangzhou) → BCN — 16 y 17 oct 2026
 - 4 llamadas API/día
 
 ### asia-oct-2026-directo (solo directos)
-- **IDA**: BCN → ICN / TPE / HKG — 1 oct 2026 (solo 1 fecha para ahorrar cuota)
+- **IDA**: BCN → ICN / TPE / HKG — 31 ago 2026 (solo 1 fecha para ahorrar cuota)
 - **VUELTA**: PEK / PVG / CAN → BCN — 16 oct 2026
 - max_stops: 0
 - 2 llamadas API/día

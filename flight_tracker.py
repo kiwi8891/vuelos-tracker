@@ -458,6 +458,19 @@ def main():
     print("\nGenerando gráfica...")
     generate_chart()
 
+    print("\nActualizando repositorio...")
+    import subprocess, datetime
+    repo = Path(__file__).parent
+    today = datetime.date.today().isoformat()
+    subprocess.run(["git", "add", "data/prices.csv"], cwd=repo, check=True)
+    result = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo)
+    if result.returncode != 0:
+        subprocess.run(["git", "commit", "-m", f"chore: update prices {today}"], cwd=repo, check=True)
+        subprocess.run(["git", "push"], cwd=repo, check=True)
+        print("  CSV commiteado y pusheado")
+    else:
+        print("  Sin cambios en el CSV")
+
     print("✓ Hecho")
 
 

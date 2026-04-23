@@ -16,7 +16,7 @@ Definidas en `config.json`. Actualmente dos trips:
 
 ### asia-oct-2026 (con escalas)
 - **IDA**: BCN → ICN (Seúl) / TPE (Taipei) / HKG (Hong Kong) — 31 ago y 1 oct 2026
-- **VUELTA**: PEK (Pekín) / PVG (Shanghái) / CAN (Guangzhou) → BCN — 16 y 17 oct 2026
+- **VUELTA**: PEK (Pekín) / PVG (Shanghái) / SZX (Shenzhen) → BCN — 16 y 17 oct 2026
 - 4 llamadas API/día
 
 ### asia-oct-2026-directo (solo directos)

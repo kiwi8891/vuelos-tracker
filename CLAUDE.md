@@ -12,20 +12,26 @@ Dashboard interactivo en GitHub Pages.
 - **Total: 4 personas** — todos los precios se muestran en total y €/persona
 
 ## Rutas monitorizadas
-Definidas en `config.json`. Actualmente dos trips:
+Definidas en `config.json`. Actualmente tres trips:
 
 ### asia-oct-2026 (con escalas)
-- **IDA**: BCN → ICN (Seúl) / TPE (Taipei) / HKG (Hong Kong) — 31 ago y 1 oct 2026
+- **IDA**: BCN → ICN (Seúl) / TPE (Taipei) / HKG (Hong Kong) — 30 sep y 1 oct 2026
 - **VUELTA**: PEK (Pekín) / PVG (Shanghái) / SZX (Shenzhen) → BCN — 16 y 17 oct 2026
 - 4 llamadas API/día
 
 ### asia-oct-2026-directo (solo directos)
-- **IDA**: BCN → ICN / TPE / HKG — 31 ago 2026 (solo 1 fecha para ahorrar cuota)
-- **VUELTA**: PEK / PVG / CAN → BCN — 16 oct 2026
+- **IDA**: BCN → ICN / TPE / HKG — 30 sep 2026 (solo 1 fecha para ahorrar cuota)
+- **VUELTA**: PEK / PVG / SZX → BCN — 16 oct 2026
 - max_stops: 0
 - 2 llamadas API/día
 
-**Total: 6 llamadas/día × 31 días = ~186/mes** (límite: 250 gratis)
+### icn-bcn-directo (vuelta solo Seúl, sin outbound)
+- **VUELTA**: ICN (Seúl) → BCN directo — 16 y 17 oct 2026
+- Sin tramo de ida (outbound: null en config.json)
+- max_stops: 0
+- 2 llamadas API/día
+
+**Total: 8 llamadas/día × ~31 días = ~248/mes** (límite: 250 gratis)
 
 ## Stack técnico
 - **API de vuelos**: SerpAPI Google Flights (free: 250 llamadas/mes)
@@ -51,11 +57,11 @@ Editar `config.json`. Estructura de un trip:
 {
   "id": "id-unico",
   "name": "Nombre visible",
-  "outbound": {
+  "outbound": {               ← opcional; omitir para trips solo-vuelta
     "origin": "BCN",
     "destinations": ["ICN", "TPE"],
     "dates": ["2026-10-01"],
-    "max_stops": null        ← null = sin filtro, 0 = solo directos
+    "max_stops": null         ← null = sin filtro, 0 = solo directos
   },
   "return": {
     "origins": ["PEK", "PVG"],

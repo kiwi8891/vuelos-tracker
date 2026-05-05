@@ -39,6 +39,7 @@ IATA = {
     "BCN": "Barcelona", "MAD": "Madrid",      "LHR": "Londres",
     "NRT": "Tokio",     "KIX": "Osaka",       "BKK": "Bangkok",
     "SIN": "Singapur",  "DXB": "Dubai",       "DOH": "Doha",
+    "SZX": "Shenzhen",
 }
 
 
@@ -294,7 +295,7 @@ def generate_chart():
 
 def process_trip(trip, today, history, cfg_alerts, passengers):
     trip_id   = trip["id"]
-    out_cfg   = trip["outbound"]
+    out_cfg   = trip.get("outbound")
     ret_cfg   = trip["return"]
     pax       = passengers["adults"] + passengers.get("children", 0)
 
@@ -304,59 +305,60 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
     outbound_best    = []
     return_best      = []
 
-    out_origin  = out_cfg["origin"]
-    out_dests   = ",".join(out_cfg["destinations"])
-    out_max     = out_cfg.get("max_stops")
     ret_origins = ",".join(ret_cfg["origins"])
     ret_dest    = ret_cfg["destination"]
     ret_max     = ret_cfg.get("max_stops")
+    orig_names  = " / ".join(IATA.get(o, o) for o in ret_cfg["origins"])
 
-    dest_names = " / ".join(IATA.get(d, d) for d in out_cfg["destinations"])
-    orig_names = " / ".join(IATA.get(o, o) for o in ret_cfg["origins"])
-    stops_tag  = " (directos)" if out_max == 0 else ""
+    if out_cfg:
+        out_origin = out_cfg["origin"]
+        out_dests  = ",".join(out_cfg["destinations"])
+        out_max    = out_cfg.get("max_stops")
+        dest_names = " / ".join(IATA.get(d, d) for d in out_cfg["destinations"])
+        stops_tag  = " (directos)" if out_max == 0 else ""
 
-    lines.append(f"<b>── IDA{stops_tag}</b> {IATA.get(out_origin, out_origin)} → {dest_names}")
+        lines.append(f"<b>── IDA{stops_tag}</b> {IATA.get(out_origin, out_origin)} → {dest_names}")
 
-    for dep_date in out_cfg["dates"]:
-        flights, insights = search_flights(
-            out_origin, out_dests, dep_date,
-            f"{out_origin}→Asia {dep_date}", passengers,
-        )
-        best = parse_best(flights, max_stops=out_max)
-        if not best:
-            lines.append(f"  {dep_date}: sin resultados")
-            continue
+        for dep_date in out_cfg["dates"]:
+            flights, insights = search_flights(
+                out_origin, out_dests, dep_date,
+                f"{out_origin}→Asia {dep_date}", passengers,
+            )
+            best = parse_best(flights, max_stops=out_max)
+            if not best:
+                lines.append(f"  {dep_date}: sin resultados")
+                continue
 
-        g_emoji, g_text = google_label(insights)
-        typical   = insights.get("typical_price_range", [])
-        typ_str   = f"€{typical[0]}–€{typical[1]}" if len(typical) == 2 else "—"
-        dest_name = IATA.get(best["destination"], best["destination"])
-        key       = f"{out_origin}-{best['destination']}-{dep_date}"
-        own       = own_benchmark(history, key, best["price"], cfg_alerts)
+            g_emoji, g_text = google_label(insights)
+            typical   = insights.get("typical_price_range", [])
+            typ_str   = f"€{typical[0]}–€{typical[1]}" if len(typical) == 2 else "—"
+            dest_name = IATA.get(best["destination"], best["destination"])
+            key       = f"{out_origin}-{best['destination']}-{dep_date}"
+            own       = own_benchmark(history, key, best["price"], cfg_alerts)
 
-        if g_text == "BAJO":
-            any_google_alert = True
-        if own and own[2]:
-            any_own_alert = True
+            if g_text == "BAJO":
+                any_google_alert = True
+            if own and own[2]:
+                any_own_alert = True
 
-        g_tag = " 🚨 <b>GOOGLE: PRECIO BAJO</b>" if g_text == "BAJO" else ""
-        lines.append(
-            f"\n  <b>{dep_date} → {dest_name}</b>\n"
-            f"  💶 {fmt_price(best['price'], pax)} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
-            f"  {g_emoji} Google: {g_text} (típico {typ_str}){g_tag}\n"
-            f"  {fmt_own(own)}"
-        )
-        save_record({
-            "date": today, "trip_id": trip_id, "type": "outbound",
-            "origin": out_origin, "destination": best["destination"],
-            "flight_date": dep_date, "price_eur": best["price"],
-            "stops": best["stops"], "airline": best["airline"],
-            "duration_m": best["duration_m"],
-            "price_level": insights.get("price_level", ""),
-            "typical_low":  typical[0] if len(typical) == 2 else "",
-            "typical_high": typical[1] if len(typical) == 2 else "",
-        })
-        outbound_best.append((dep_date, best))
+            g_tag = " 🚨 <b>GOOGLE: PRECIO BAJO</b>" if g_text == "BAJO" else ""
+            lines.append(
+                f"\n  <b>{dep_date} → {dest_name}</b>\n"
+                f"  💶 {fmt_price(best['price'], pax)} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
+                f"  {g_emoji} Google: {g_text} (típico {typ_str}){g_tag}\n"
+                f"  {fmt_own(own)}"
+            )
+            save_record({
+                "date": today, "trip_id": trip_id, "type": "outbound",
+                "origin": out_origin, "destination": best["destination"],
+                "flight_date": dep_date, "price_eur": best["price"],
+                "stops": best["stops"], "airline": best["airline"],
+                "duration_m": best["duration_m"],
+                "price_level": insights.get("price_level", ""),
+                "typical_low":  typical[0] if len(typical) == 2 else "",
+                "typical_high": typical[1] if len(typical) == 2 else "",
+            })
+            outbound_best.append((dep_date, best))
 
     stops_tag = " (directos)" if ret_max == 0 else ""
     lines.append(f"\n<b>── VUELTA{stops_tag}</b> {orig_names} → {IATA.get(ret_dest, ret_dest)}")

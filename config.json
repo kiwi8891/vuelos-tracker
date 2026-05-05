@@ -40,6 +40,16 @@
         "dates": ["2026-10-16"],
         "max_stops": 0
       }
+    },
+    {
+      "id": "icn-bcn-directo",
+      "name": "Seúl → BCN Directo",
+      "return": {
+        "origins": ["ICN"],
+        "destination": "BCN",
+        "dates": ["2026-10-16", "2026-10-17"],
+        "max_stops": 0
+      }
     }
   ]
 }

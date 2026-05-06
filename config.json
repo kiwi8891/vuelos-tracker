@@ -51,5 +51,12 @@
         "max_stops": 0
       }
     }
+  ],
+  "combos": [
+    {
+      "name": "Seúl Ida+Vuelta Directo",
+      "outbound_trip": "asia-oct-2026-directo",
+      "return_trip": "icn-bcn-directo"
+    }
   ]
 }

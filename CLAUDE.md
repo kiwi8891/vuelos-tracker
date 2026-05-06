@@ -12,7 +12,7 @@ Dashboard interactivo en GitHub Pages.
 - **Total: 4 personas** — todos los precios se muestran en total y €/persona
 
 ## Rutas monitorizadas
-Definidas en `config.json`. Actualmente tres trips:
+Definidas en `config.json`. Actualmente tres trips + un combo cross-trip:
 
 ### asia-oct-2026 (con escalas)
 - **IDA**: BCN → ICN (Seúl) / TPE (Taipei) / HKG (Hong Kong) — 30 sep y 1 oct 2026
@@ -33,6 +33,10 @@ Definidas en `config.json`. Actualmente tres trips:
 
 **Total: 8 llamadas/día × ~31 días = ~248/mes** (límite: 250 gratis)
 
+### Combo "Seúl Ida+Vuelta Directo" (sin llamadas extra)
+Sección calculada cruzando datos existentes: IDA de `asia-oct-2026-directo` + VUELTA de `icn-bcn-directo`.
+Aparece al final del mensaje Telegram como cuarta sección. Configurado en `combos` de `config.json`.
+
 ## Stack técnico
 - **API de vuelos**: SerpAPI Google Flights (free: 250 llamadas/mes)
   - Multi-aeropuerto: `arrival_id="ICN,TPE,HKG"` = 1 sola llamada
@@ -52,7 +56,7 @@ Definidas en `config.json`. Actualmente tres trips:
 - `~/Library/LaunchAgents/com.gerardo.vuelostracker.plist` — agente launchd (Mac Mini, fuera del repo)
 
 ## Cómo añadir/modificar búsquedas
-Editar `config.json`. Estructura de un trip:
+Editar `config.json`. Estructura de un trip (trips) y de un combo cross-trip (combos):
 ```json
 {
   "id": "id-unico",
@@ -69,6 +73,15 @@ Editar `config.json`. Estructura de un trip:
     "dates": ["2026-10-16"],
     "max_stops": null
   }
+}
+```
+Estructura de un combo (sin llamadas API extra, cruza datos de trips ya existentes):
+```json
+{
+  "id": "id-unico",
+  "name": "Nombre visible",
+  "outbound_trip": "id-del-trip-que-tiene-la-ida",
+  "return_trip":   "id-del-trip-que-tiene-la-vuelta"
 }
 ```
 Commit + push → ejecuta automáticamente en el siguiente cron (09:00h), o lanzar manualmente:

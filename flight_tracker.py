@@ -13,7 +13,7 @@ import csv
 import json
 import statistics
 import io
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import requests
@@ -135,17 +135,23 @@ def fmt_duration(m):
     return f"{h}h{mm:02d}m"
 
 
+def fmt_date(d):
+    parsed = datetime.strptime(d, "%Y-%m-%d")
+    return f"{parsed.day} {parsed.strftime('%b').lower()}"
+
+
 def fmt_price(total, pax):
-    return f"€{total} (€{total // pax}/pers)"
+    t = int(total)
+    return f"€{t} (€{t // pax}/pers)"
 
 
 def fmt_own(result):
     if result is None:
-        return "📊 media propia: acumulando datos…"
+        return "📊 acumulando…"
     avg, diff_pct, is_alert = result
     sign  = "▼" if diff_pct < 0 else "▲"
-    badge = " 🚨 <b>MÍNIMO PROPIO</b>" if is_alert else ""
-    return f"📊 media propia: €{avg:.0f} ({sign}{abs(diff_pct)*100:.1f}%){badge}"
+    badge = " 🚨 <b>MÍNIMO</b>" if is_alert else ""
+    return f"📊 €{avg:.0f} ({sign}{abs(diff_pct)*100:.1f}%){badge}"
 
 
 # ── Persistencia ──────────────────────────────────────────────────────────────
@@ -341,12 +347,15 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
             if own and own[2]:
                 any_own_alert = True
 
-            g_tag = " 🚨 <b>GOOGLE: PRECIO BAJO</b>" if g_text == "BAJO" else ""
+            g_tag = " 🚨 <b>BAJO</b>" if g_text == "BAJO" else ""
+            info_parts = []
+            if g_text != "—":
+                info_parts.append(f"{g_emoji} {g_text} (típico {typ_str}){g_tag}")
+            info_parts.append(fmt_own(own))
             lines.append(
-                f"\n  <b>{dep_date} → {dest_name}</b>\n"
-                f"  💶 {fmt_price(best['price'], pax)} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
-                f"  {g_emoji} Google: {g_text} (típico {typ_str}){g_tag}\n"
-                f"  {fmt_own(own)}"
+                f"\n  <b>{fmt_date(dep_date)} → {dest_name}</b>\n"
+                f"  💶 {fmt_price(best['price'], pax)} · {best['stops']} esc · {best['airline']} · {fmt_duration(best['duration_m'])}\n"
+                f"  {'  ·  '.join(info_parts)}"
             )
             save_record({
                 "date": today, "trip_id": trip_id, "type": "outbound",
@@ -385,12 +394,15 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
         if own and own[2]:
             any_own_alert = True
 
-        g_tag = " 🚨 <b>GOOGLE: PRECIO BAJO</b>" if g_text == "BAJO" else ""
+        g_tag = " 🚨 <b>BAJO</b>" if g_text == "BAJO" else ""
+        info_parts = []
+        if g_text != "—":
+            info_parts.append(f"{g_emoji} {g_text} (típico {typ_str}){g_tag}")
+        info_parts.append(fmt_own(own))
         lines.append(
-            f"\n  <b>{ret_date} {orig_name}</b>\n"
-            f"  💶 {fmt_price(best['price'], pax)} | {best['stops']} esc | {best['airline']} | {fmt_duration(best['duration_m'])}\n"
-            f"  {g_emoji} Google: {g_text} (típico {typ_str}){g_tag}\n"
-            f"  {fmt_own(own)}"
+            f"\n  <b>{fmt_date(ret_date)} {orig_name}→BCN</b>\n"
+            f"  💶 {fmt_price(best['price'], pax)} · {best['stops']} esc · {best['airline']} · {fmt_duration(best['duration_m'])}\n"
+            f"  {'  ·  '.join(info_parts)}"
         )
         save_record({
             "date": today, "trip_id": trip_id, "type": "return",
@@ -411,11 +423,36 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
         dn    = IATA.get(bo[1]["destination"], bo[1]["destination"])
         on    = IATA.get(br[1]["origin"],      br[1]["origin"])
         lines.append(
-            f"\n💰 <b>MEJOR COMBO:</b> {IATA.get(out_origin, out_origin)}→{dn} ({bo[0]}) "
-            f"+ {on}→{IATA.get(ret_dest, ret_dest)} ({br[0]}) = <b>{fmt_price(total, pax)}</b>"
+            f"\n💰 <b>MEJOR COMBO:</b> {IATA.get(out_origin, out_origin)}→{dn} ({fmt_date(bo[0])}) "
+            f"+ {on}→{IATA.get(ret_dest, ret_dest)} ({fmt_date(br[0])}) = <b>{fmt_price(total, pax)}</b>"
         )
 
-    return lines, any_google_alert, any_own_alert
+    return lines, any_google_alert, any_own_alert, outbound_best, return_best
+
+
+# ── Combos cross-trip ─────────────────────────────────────────────────────────
+
+def render_combo(combo, trip_results, passengers):
+    pax     = passengers["adults"] + passengers.get("children", 0)
+    out_res = trip_results.get(combo["outbound_trip"], {}).get("outbound", [])
+    ret_res = trip_results.get(combo["return_trip"], {}).get("return", [])
+    if not out_res or not ret_res:
+        return []
+    bo = min(out_res, key=lambda x: x[1]["price"])
+    br = min(ret_res, key=lambda x: x[1]["price"])
+    total = bo[1]["price"] + br[1]["price"]
+    od = IATA.get(bo[1]["origin"],      bo[1]["origin"])
+    dn = IATA.get(bo[1]["destination"], bo[1]["destination"])
+    on = IATA.get(br[1]["origin"],      br[1]["origin"])
+    rd = IATA.get(br[1]["destination"], br[1]["destination"])
+    return [
+        f"\n<b>━━ {combo['name'].upper()} ━━</b>",
+        f"\n  <b>IDA {fmt_date(bo[0])} {od}→{dn}</b>\n"
+        f"  💶 {fmt_price(bo[1]['price'], pax)} · {bo[1]['stops']} esc · {bo[1]['airline']} · {fmt_duration(bo[1]['duration_m'])}",
+        f"\n  <b>VUELTA {fmt_date(br[0])} {on}→{rd}</b>\n"
+        f"  💶 {fmt_price(br[1]['price'], pax)} · {br[1]['stops']} esc · {br[1]['airline']} · {fmt_duration(br[1]['duration_m'])}",
+        f"\n💰 <b>TOTAL: {fmt_price(total, pax)}</b>",
+    ]
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -431,16 +468,21 @@ def main():
     any_own_alert    = False
     lines = [f"✈️ <b>VUELOS TRACKER</b> — {today}\n"]
 
+    trip_results = {}
     for trip in config["trips"]:
         print(f"\n[{trip['name']}]")
-        t_lines, t_google, t_own = process_trip(
+        t_lines, t_google, t_own, t_out, t_ret = process_trip(
             trip, today, history, cfg_alerts, passengers
         )
         lines.extend(t_lines)
+        trip_results[trip["id"]] = {"outbound": t_out, "return": t_ret}
         if t_google:
             any_google_alert = True
         if t_own:
             any_own_alert = True
+
+    for combo in config.get("combos", []):
+        lines.extend(render_combo(combo, trip_results, passengers))
 
     if any_google_alert or any_own_alert:
         tags = []

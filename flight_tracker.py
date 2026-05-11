@@ -13,7 +13,9 @@ import csv
 import json
 import statistics
 import io
-from datetime import date, datetime
+import subprocess
+import shutil
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -42,6 +44,122 @@ IATA = {
     "SZX": "Shenzhen",
 }
 
+SWEEP_FILE = Path("data/date_sweeps.csv")
+SWEEP_FIELDS = ["date", "trip_id", "type", "origin", "destination",
+                "config_date", "best_date", "best_price_total", "delta_vs_config_pct"]
+
+
+# ── flight-goat integration (gratis, sin API key) ─────────────────────────────
+
+FLIGHT_GOAT_BIN = shutil.which("flight-goat-pp-cli") or str(Path.home() / "go/bin/flight-goat-pp-cli")
+
+
+def _run_flight_goat(args, timeout=30):
+    """Ejecuta flight-goat-pp-cli con --agent y devuelve dict/list (o None si falla)."""
+    if not Path(FLIGHT_GOAT_BIN).exists():
+        return None
+    try:
+        r = subprocess.run(
+            [FLIGHT_GOAT_BIN, *args, "--agent"],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if r.returncode != 0:
+            return None
+        return json.loads(r.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return None
+
+
+def gf_dates_sweep(origin, destinations, target_dates, pax, padding=5, max_stops=None):
+    """Busca el día más barato en ventana ±padding alrededor de target_dates.
+    `destinations` puede ser lista (multi-aeropuerto) — itera sobre cada uno.
+    Devuelve el mejor día y su precio total (×pax)."""
+    if not target_dates:
+        return None
+    target_objs = [datetime.strptime(d, "%Y-%m-%d").date() for d in target_dates]
+    d_from = (min(target_objs) - timedelta(days=padding)).strftime("%Y-%m-%d")
+    d_to   = (max(target_objs) + timedelta(days=padding)).strftime("%Y-%m-%d")
+
+    best = None
+    for dest in destinations:
+        args = ["dates", origin, dest, "--from", d_from, "--to", d_to,
+                "--currency", "EUR", "--sort", "--limit", "5"]
+        if max_stops == 0:
+            args += ["--stops", "non_stop"]
+        data = _run_flight_goat(args, timeout=20)
+        if not data:
+            continue
+        for entry in (data.get("dates") or []):
+            total = entry.get("price", 0) * pax
+            if best is None or total < best["price_total"]:
+                best = {
+                    "origin": origin, "destination": dest,
+                    "date": entry["departure_date"],
+                    "price_total": total,
+                }
+    return best
+
+
+def gf_validate(origin, destination, fly_date, pax, max_stops=None):
+    """Cross-check con Google Flights directo. Devuelve precio total más barato encontrado."""
+    args = ["flights", origin, destination, fly_date,
+            "--currency", "EUR", "--passengers", str(pax),
+            "--sort", "cheapest"]
+    if max_stops == 0:
+        args += ["--stops", "non_stop"]
+    data = _run_flight_goat(args, timeout=25)
+    if not data:
+        return None
+    flights = (data.get("flights") or data.get("results") or [])
+    if not flights:
+        return None
+    prices = [f.get("price") for f in flights if isinstance(f.get("price"), (int, float))]
+    return min(prices) if prices else None
+
+
+def predict_trend(history_prices, current_price):
+    """Predicción simple basada en pendiente últimos 7 vs 14 días.
+    Devuelve (emoji, etiqueta, razonamiento_corto) o None si no hay datos."""
+    if len(history_prices) < 5:
+        return None
+    recent = history_prices[-7:]
+    older  = history_prices[-14:-7] if len(history_prices) >= 14 else history_prices[:-7]
+    if not older:
+        return None
+    avg_recent = statistics.mean(recent)
+    avg_older  = statistics.mean(older)
+    diff_pct = (avg_recent - avg_older) / avg_older if avg_older else 0
+
+    if diff_pct > 0.03:
+        emoji, label = "⬆️", "SUBIENDO"
+        reason = f"{diff_pct*100:+.1f}% vs sem.anterior"
+    elif diff_pct < -0.03:
+        emoji, label = "⬇️", "BAJANDO"
+        reason = f"{diff_pct*100:+.1f}% vs sem.anterior"
+    else:
+        emoji, label = "➡️", "ESTABLE"
+        reason = f"±{abs(diff_pct)*100:.1f}%"
+
+    # Posición del precio actual respecto al rango histórico
+    lo, hi = min(history_prices), max(history_prices)
+    if hi > lo:
+        pos = (current_price - lo) / (hi - lo)
+        if pos < 0.20:
+            reason += " · cerca mínimo"
+        elif pos > 0.80:
+            reason += " · cerca máximo"
+    return emoji, label, reason
+
+
+def save_sweep(row):
+    SWEEP_FILE.parent.mkdir(exist_ok=True)
+    write_header = not SWEEP_FILE.exists()
+    with open(SWEEP_FILE, "a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=SWEEP_FIELDS)
+        if write_header:
+            w.writeheader()
+        w.writerow(row)
+
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -53,14 +171,21 @@ def load_config():
 # ── Histórico ─────────────────────────────────────────────────────────────────
 
 def load_history():
+    """Agrupa por (trip_id, origin, destination, flight_date) para no mezclar
+    precios de configuraciones distintas (directo vs con escalas)."""
     if not DATA_FILE.exists():
         return {}
     history = {}
     with open(DATA_FILE, newline="") as f:
         for row in csv.DictReader(f):
-            key = f"{row['origin']}-{row['destination']}-{row['flight_date']}"
+            tid = row.get("trip_id") or "default"
+            key = f"{tid}|{row['origin']}-{row['destination']}-{row['flight_date']}"
             history.setdefault(key, []).append(float(row["price_eur"]))
     return history
+
+
+def hkey(trip_id, origin, destination, flight_date):
+    return f"{trip_id}|{origin}-{destination}-{flight_date}"
 
 
 def own_benchmark(history, key, current_price, cfg_alerts):
@@ -339,7 +464,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
             typical   = insights.get("typical_price_range", [])
             typ_str   = f"€{typical[0]}–€{typical[1]}" if len(typical) == 2 else "—"
             dest_name = IATA.get(best["destination"], best["destination"])
-            key       = f"{out_origin}-{best['destination']}-{dep_date}"
+            key       = hkey(trip_id, out_origin, best['destination'], dep_date)
             own       = own_benchmark(history, key, best["price"], cfg_alerts)
 
             if g_text == "BAJO":
@@ -352,6 +477,18 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
             if g_text != "—":
                 info_parts.append(f"{g_emoji} {g_text} (típico {typ_str}){g_tag}")
             info_parts.append(fmt_own(own))
+
+            trend = predict_trend(history.get(key, []), best["price"])
+            if trend:
+                te, tl, tr = trend
+                info_parts.append(f"{te} {tl} ({tr})")
+
+            gf_total = gf_validate(out_origin, best["destination"], dep_date, pax, max_stops=out_max)
+            if gf_total:
+                gf_diff = (best["price"] - gf_total) / best["price"]
+                if abs(gf_diff) >= 0.15:
+                    info_parts.append(f"⚠️ GF €{int(gf_total)} ({gf_diff*100:+.0f}%)")
+
             lines.append(
                 f"\n  <b>{fmt_date(dep_date)} → {dest_name}</b>\n"
                 f"  💶 {fmt_price(best['price'], pax)} · {best['stops']} esc · {best['airline']} · {fmt_duration(best['duration_m'])}\n"
@@ -386,7 +523,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
         typical   = insights.get("typical_price_range", [])
         typ_str   = f"€{typical[0]}–€{typical[1]}" if len(typical) == 2 else "—"
         orig_name = IATA.get(best["origin"], best["origin"])
-        key       = f"{best['origin']}-{ret_dest}-{ret_date}"
+        key       = hkey(trip_id, best['origin'], ret_dest, ret_date)
         own       = own_benchmark(history, key, best["price"], cfg_alerts)
 
         if g_text == "BAJO":
@@ -399,6 +536,18 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
         if g_text != "—":
             info_parts.append(f"{g_emoji} {g_text} (típico {typ_str}){g_tag}")
         info_parts.append(fmt_own(own))
+
+        trend = predict_trend(history.get(key, []), best["price"])
+        if trend:
+            te, tl, tr = trend
+            info_parts.append(f"{te} {tl} ({tr})")
+
+        gf_total = gf_validate(best["origin"], ret_dest, ret_date, pax, max_stops=ret_max)
+        if gf_total:
+            gf_diff = (best["price"] - gf_total) / best["price"]
+            if abs(gf_diff) >= 0.15:
+                info_parts.append(f"⚠️ GF €{int(gf_total)} ({gf_diff*100:+.0f}%)")
+
         lines.append(
             f"\n  <b>{fmt_date(ret_date)} {orig_name}→BCN</b>\n"
             f"  💶 {fmt_price(best['price'], pax)} · {best['stops']} esc · {best['airline']} · {fmt_duration(best['duration_m'])}\n"
@@ -455,6 +604,103 @@ def render_combo(combo, trip_results, passengers):
     ]
 
 
+# ── Date sweep (busca día más barato fuera del config) ──────────────────────
+
+def run_date_sweeps(config, today, passengers):
+    """Llama a flight-goat dates para cada ruta y devuelve líneas Telegram con
+    los días más baratos en ventana ±5 si baten al mínimo configurado."""
+    pax = passengers["adults"] + passengers.get("children", 0)
+    lines = []
+    found_better = False
+
+    for trip in config["trips"]:
+        trip_id  = trip["id"]
+        out_cfg  = trip.get("outbound")
+        ret_cfg  = trip["return"]
+
+        if out_cfg:
+            best = gf_dates_sweep(
+                out_cfg["origin"], out_cfg["destinations"],
+                out_cfg["dates"], pax,
+                padding=5, max_stops=out_cfg.get("max_stops"),
+            )
+            if best and best["date"] not in out_cfg["dates"]:
+                # comparar con mínimo del config
+                cfg_min = None
+                for d in out_cfg["dates"]:
+                    cmp_args = ["dates", out_cfg["origin"], best["destination"],
+                                "--from", d, "--to", d, "--currency", "EUR"]
+                    if out_cfg.get("max_stops") == 0:
+                        cmp_args += ["--stops", "non_stop"]
+                    data = _run_flight_goat(cmp_args, timeout=15)
+                    dates_arr = data.get("dates") if data else None
+                    if dates_arr:
+                        p = dates_arr[0]["price"] * pax
+                        if cfg_min is None or p < cfg_min:
+                            cfg_min = p
+                if cfg_min and best["price_total"] < cfg_min * 0.90:
+                    delta = (best["price_total"] - cfg_min) / cfg_min * 100
+                    dest_name = IATA.get(best["destination"], best["destination"])
+                    lines.append(
+                        f"  💡 IDA <b>{fmt_date(best['date'])}</b> → {dest_name}: "
+                        f"€{int(best['price_total'])} ({delta:+.0f}% vs config)"
+                    )
+                    save_sweep({
+                        "date": today, "trip_id": trip_id, "type": "outbound",
+                        "origin": out_cfg["origin"], "destination": best["destination"],
+                        "config_date": ",".join(out_cfg["dates"]),
+                        "best_date": best["date"],
+                        "best_price_total": int(best["price_total"]),
+                        "delta_vs_config_pct": f"{delta:.1f}",
+                    })
+                    found_better = True
+
+        # Vuelta: iteramos cada origen (flight-goat dates es 1-a-1)
+        ret_best = None
+        for ret_origin in ret_cfg["origins"]:
+            b = gf_dates_sweep(
+                ret_origin, [ret_cfg["destination"]],
+                ret_cfg["dates"], pax,
+                padding=5, max_stops=ret_cfg.get("max_stops"),
+            )
+            if b and (ret_best is None or b["price_total"] < ret_best["price_total"]):
+                b["origin"] = ret_origin
+                ret_best = b
+        if ret_best and ret_best["date"] not in ret_cfg["dates"]:
+            cfg_min = None
+            for d in ret_cfg["dates"]:
+                cmp_args = ["dates", ret_best["origin"], ret_cfg["destination"],
+                            "--from", d, "--to", d, "--currency", "EUR"]
+                if ret_cfg.get("max_stops") == 0:
+                    cmp_args += ["--stops", "non_stop"]
+                data = _run_flight_goat(cmp_args, timeout=15)
+                dates_arr = data.get("dates") if data else None
+                if dates_arr:
+                    p = dates_arr[0]["price"] * pax
+                    if cfg_min is None or p < cfg_min:
+                        cfg_min = p
+            if cfg_min and ret_best["price_total"] < cfg_min * 0.90:
+                delta = (ret_best["price_total"] - cfg_min) / cfg_min * 100
+                orig_name = IATA.get(ret_best["origin"], ret_best["origin"])
+                lines.append(
+                    f"  💡 VUELTA <b>{fmt_date(ret_best['date'])}</b> {orig_name}→BCN: "
+                    f"€{int(ret_best['price_total'])} ({delta:+.0f}% vs config)"
+                )
+                save_sweep({
+                    "date": today, "trip_id": trip_id, "type": "return",
+                    "origin": ret_best["origin"], "destination": ret_cfg["destination"],
+                    "config_date": ",".join(ret_cfg["dates"]),
+                    "best_date": ret_best["date"],
+                    "best_price_total": int(ret_best["price_total"]),
+                    "delta_vs_config_pct": f"{delta:.1f}",
+                })
+                found_better = True
+
+    if found_better:
+        return ["\n<b>━━ DÍAS MÁS BARATOS (±5d, fuera del config) ━━</b>"] + lines
+    return []
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -484,6 +730,14 @@ def main():
     for combo in config.get("combos", []):
         lines.extend(render_combo(combo, trip_results, passengers))
 
+    print("\nBarrido de fechas ±5d (flight-goat)...")
+    sweep_lines = run_date_sweeps(config, today, passengers)
+    if sweep_lines:
+        lines.extend(sweep_lines)
+        print(f"  {len(sweep_lines)-1} mejoras encontradas")
+    else:
+        print("  Sin mejoras significativas")
+
     if any_google_alert or any_own_alert:
         tags = []
         if any_google_alert:
@@ -503,10 +757,12 @@ def main():
     generate_chart()
 
     print("\nActualizando repositorio...")
-    import subprocess, datetime
+    import datetime
     repo = Path(__file__).parent
     today = datetime.date.today().isoformat()
-    subprocess.run(["git", "add", "data/prices.csv"], cwd=repo, check=True)
+    for p in ["data/prices.csv", "data/date_sweeps.csv"]:
+        if (repo / p).exists():
+            subprocess.run(["git", "add", p], cwd=repo, check=False)
     result = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo)
     if result.returncode != 0:
         subprocess.run(["git", "commit", "-m", f"chore: update prices {today}"], cwd=repo, check=True)

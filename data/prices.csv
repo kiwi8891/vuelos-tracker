@@ -195,3 +195,9 @@ date,trip_id,type,origin,destination,flight_date,price_eur,stops,airline,duratio
 2026-05-11,asia-oct-2026-directo,return,PVG,BCN,2026-10-16,1864,0,Air China,795,,,
 2026-05-11,icn-bcn-directo,return,ICN,BCN,2026-10-16,1909,0,T'Way Air,895,typical,1150,2050
 2026-05-11,icn-bcn-directo,return,ICN,BCN,2026-10-17,2025,0,T'Way Air,895,typical,1150,2050
+2026-05-12,asia-oct-2026,outbound,BCN,ICN,2026-09-30,1428,1,Qatar Airways,1050,,,
+2026-05-12,asia-oct-2026,outbound,BCN,ICN,2026-10-01,1428,1,Qatar Airways,1095,,,
+2026-05-12,asia-oct-2026,return,PVG,BCN,2026-10-16,1278,1,Etihad,1120,,,
+2026-05-12,asia-oct-2026,return,PVG,BCN,2026-10-17,1278,1,Etihad,1120,,,
+2026-05-12,asia-oct-2026-directo,outbound,BCN,ICN,2026-09-30,2687,0,T'Way Air,745,,,
+2026-05-12,asia-oct-2026-directo,return,PVG,BCN,2026-10-16,1868,0,Air China,795,,,

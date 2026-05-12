@@ -161,6 +161,49 @@ def save_sweep(row):
         w.writerow(row)
 
 
+# ── Stop-loss alerts (basados en ancla + threshold definido en config.json) ──
+
+def check_stop_loss(stop_losses, trip_id, type_, origin, destination, current_price):
+    """Busca regla de stop-loss aplicable y devuelve estado.
+    Match permisivo: si origin no se especifica, cualquier origin coincide
+    (útil para reglas que aplican a 'cualquier vuelta dentro de un trip')."""
+    if not stop_losses:
+        return None
+    for sl in stop_losses:
+        if sl.get("trip_id") != trip_id or sl.get("type") != type_:
+            continue
+        if sl.get("origin") and sl["origin"] != origin:
+            continue
+        if sl.get("destination") and sl["destination"] != destination:
+            continue
+        anchor    = float(sl["anchor_price"])
+        threshold = float(sl.get("threshold_pct", 0.05))
+        trigger   = anchor * (1 + threshold)
+        diff_pct  = (current_price - anchor) / anchor if anchor else 0
+        triggered = current_price >= trigger
+        return {
+            "label":    sl.get("label", f"{type_} {origin}→{destination}"),
+            "anchor":   anchor,
+            "trigger":  trigger,
+            "current":  current_price,
+            "diff_pct": diff_pct,
+            "triggered": triggered,
+        }
+    return None
+
+
+def fmt_stop_loss(sl):
+    if not sl:
+        return None
+    arrow = "▲" if sl["diff_pct"] > 0 else ("▼" if sl["diff_pct"] < 0 else "·")
+    if sl["triggered"]:
+        return (f"🚨 <b>STOP-LOSS DISPARADO</b> · ancla €{int(sl['anchor'])} → "
+                f"trigger €{round(sl['trigger'])} · actual €{int(sl['current'])} "
+                f"({arrow}{abs(sl['diff_pct'])*100:.1f}%)")
+    return (f"🛑 stop-loss €{round(sl['trigger'])} ({arrow}{abs(sl['diff_pct'])*100:.1f}% "
+            f"vs ancla €{int(sl['anchor'])})")
+
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 def load_config():
@@ -424,7 +467,7 @@ def generate_chart():
 
 # ── Procesado de un viaje ─────────────────────────────────────────────────────
 
-def process_trip(trip, today, history, cfg_alerts, passengers):
+def process_trip(trip, today, history, cfg_alerts, passengers, stop_losses=None):
     trip_id   = trip["id"]
     out_cfg   = trip.get("outbound")
     ret_cfg   = trip["return"]
@@ -432,6 +475,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
 
     any_google_alert = False
     any_own_alert    = False
+    any_stop_loss    = False
     lines            = [f"\n<b>━━ {trip['name'].upper()} ━━</b>"]
     outbound_best    = []
     return_best      = []
@@ -488,6 +532,14 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
                 gf_diff = (best["price"] - gf_total) / best["price"]
                 if abs(gf_diff) >= 0.15:
                     info_parts.append(f"⚠️ GF €{int(gf_total)} ({gf_diff*100:+.0f}%)")
+
+            sl = check_stop_loss(stop_losses, trip_id, "outbound",
+                                 out_origin, best["destination"], best["price"])
+            sl_line = fmt_stop_loss(sl)
+            if sl_line:
+                info_parts.append(sl_line)
+                if sl["triggered"]:
+                    any_stop_loss = True
 
             lines.append(
                 f"\n  <b>{fmt_date(dep_date)} → {dest_name}</b>\n"
@@ -548,6 +600,14 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
             if abs(gf_diff) >= 0.15:
                 info_parts.append(f"⚠️ GF €{int(gf_total)} ({gf_diff*100:+.0f}%)")
 
+        sl = check_stop_loss(stop_losses, trip_id, "return",
+                             best["origin"], ret_dest, best["price"])
+        sl_line = fmt_stop_loss(sl)
+        if sl_line:
+            info_parts.append(sl_line)
+            if sl["triggered"]:
+                any_stop_loss = True
+
         lines.append(
             f"\n  <b>{fmt_date(ret_date)} {orig_name}→BCN</b>\n"
             f"  💶 {fmt_price(best['price'], pax)} · {best['stops']} esc · {best['airline']} · {fmt_duration(best['duration_m'])}\n"
@@ -576,7 +636,7 @@ def process_trip(trip, today, history, cfg_alerts, passengers):
             f"+ {on}→{IATA.get(ret_dest, ret_dest)} ({fmt_date(br[0])}) = <b>{fmt_price(total, pax)}</b>"
         )
 
-    return lines, any_google_alert, any_own_alert, outbound_best, return_best
+    return lines, any_google_alert, any_own_alert, any_stop_loss, outbound_best, return_best
 
 
 # ── Combos cross-trip ─────────────────────────────────────────────────────────
@@ -712,13 +772,15 @@ def main():
 
     any_google_alert = False
     any_own_alert    = False
+    any_stop_loss    = False
+    stop_losses      = config.get("stop_loss", [])
     lines = [f"✈️ <b>VUELOS TRACKER</b> — {today}\n"]
 
     trip_results = {}
     for trip in config["trips"]:
         print(f"\n[{trip['name']}]")
-        t_lines, t_google, t_own, t_out, t_ret = process_trip(
-            trip, today, history, cfg_alerts, passengers
+        t_lines, t_google, t_own, t_sl, t_out, t_ret = process_trip(
+            trip, today, history, cfg_alerts, passengers, stop_losses
         )
         lines.extend(t_lines)
         trip_results[trip["id"]] = {"outbound": t_out, "return": t_ret}
@@ -726,6 +788,8 @@ def main():
             any_google_alert = True
         if t_own:
             any_own_alert = True
+        if t_sl:
+            any_stop_loss = True
 
     for combo in config.get("combos", []):
         lines.extend(render_combo(combo, trip_results, passengers))
@@ -738,8 +802,10 @@ def main():
     else:
         print("  Sin mejoras significativas")
 
-    if any_google_alert or any_own_alert:
+    if any_google_alert or any_own_alert or any_stop_loss:
         tags = []
+        if any_stop_loss:
+            tags.append("STOP-LOSS disparado")
         if any_google_alert:
             tags.append("Google marca precio BAJO")
         if any_own_alert:

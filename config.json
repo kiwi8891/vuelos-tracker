@@ -58,5 +58,25 @@
       "outbound_trip": "asia-oct-2026-directo",
       "return_trip": "icn-bcn-directo"
     }
+  ],
+  "stop_loss": [
+    {
+      "label": "IDA escalas BCN→ICN",
+      "trip_id": "asia-oct-2026",
+      "type": "outbound",
+      "origin": "BCN",
+      "destination": "ICN",
+      "anchor_price": 1428,
+      "threshold_pct": 0.03
+    },
+    {
+      "label": "VUELTA escalas PVG→BCN",
+      "trip_id": "asia-oct-2026",
+      "type": "return",
+      "origin": "PVG",
+      "destination": "BCN",
+      "anchor_price": 1278,
+      "threshold_pct": 0.05
+    }
   ]
 }

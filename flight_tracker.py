@@ -276,9 +276,10 @@ def _search_flights_via_goat(departure_id, arrival_id, outbound_date, passengers
             if not data:
                 continue
             for fg in (data.get("flights") or []):
-                legs = fg.get("legs") or []
-                if not legs:
-                    continue
+                legs  = fg.get("legs") or []
+                price = fg.get("price", 0)
+                if not legs or not isinstance(price, (int, float)) or price <= 0:
+                    continue  # flight-goat marca price=0 si la aerolínea no expone precio
                 synth = [{
                     "departure_airport": {"id": (l.get("departure_airport") or {}).get("code", "?")},
                     "arrival_airport":   {"id": (l.get("arrival_airport")   or {}).get("code", "?")},

@@ -53,6 +53,18 @@ SWEEP_FIELDS = ["date", "trip_id", "type", "origin", "destination",
 
 FLIGHT_GOAT_BIN = shutil.which("flight-goat-pp-cli") or str(Path.home() / "go/bin/flight-goat-pp-cli")
 
+# Activado al detectar quota agotada en SerpAPI: el resto del run usa flight-goat
+SERPAPI_EXHAUSTED = False
+_QUOTA_PATTERNS = ("run out", "ran out", "exceeded", "quota", "limit reached",
+                   "monthly searches", "hourly searches", "no searches left")
+
+
+def _is_quota_error(msg):
+    if not msg:
+        return False
+    m = str(msg).lower()
+    return any(p in m for p in _QUOTA_PATTERNS)
+
 
 def _run_flight_goat(args, timeout=30):
     """Ejecuta flight-goat-pp-cli con --agent y devuelve dict/list (o None si falla)."""
@@ -245,8 +257,50 @@ def own_benchmark(history, key, current_price, cfg_alerts):
 
 # ── API ───────────────────────────────────────────────────────────────────────
 
+def _search_flights_via_goat(departure_id, arrival_id, outbound_date, passengers):
+    """Fallback flight-goat. Devuelve (flights, insights) compatible con parse_best.
+    `departure_id` y `arrival_id` pueden ser CSV (multi-aeropuerto); itera combos.
+    flight-goat con --passengers N devuelve precio TOTAL para N pax (igual SerpAPI)."""
+    pax = passengers["adults"] + passengers.get("children", 0)
+    if pax < 1:
+        pax = 1
+    origins  = [o.strip() for o in departure_id.split(",") if o.strip()]
+    arrivals = [a.strip() for a in arrival_id.split(",")   if a.strip()]
+    out = []
+    for orig in origins:
+        for arr in arrivals:
+            args = ["flights", orig, arr, outbound_date,
+                    "--currency", "EUR", "--passengers", str(pax),
+                    "--sort", "cheapest"]
+            data = _run_flight_goat(args, timeout=25)
+            if not data:
+                continue
+            for fg in (data.get("flights") or []):
+                legs = fg.get("legs") or []
+                if not legs:
+                    continue
+                synth = [{
+                    "departure_airport": {"id": (l.get("departure_airport") or {}).get("code", "?")},
+                    "arrival_airport":   {"id": (l.get("arrival_airport")   or {}).get("code", "?")},
+                    "airline":            (l.get("airline") or {}).get("name", "?"),
+                } for l in legs]
+                out.append({
+                    "flights":        synth,
+                    "price":          fg.get("price", 0),
+                    "total_duration": fg.get("duration", 0),
+                })
+    return out, {}  # insights vacío: sin price_level ni typical_price_range
+
+
 def search_flights(departure_id, arrival_id, outbound_date, label, passengers):
+    global SERPAPI_EXHAUSTED
     print(f"  Buscando {label}...", end=" ", flush=True)
+
+    if SERPAPI_EXHAUSTED:
+        flights, insights = _search_flights_via_goat(departure_id, arrival_id, outbound_date, passengers)
+        print(f"OK fallback ({len(flights)} vuelos)")
+        return flights, insights
+
     params = {
         "engine":         "google_flights",
         "departure_id":   departure_id,
@@ -261,12 +315,28 @@ def search_flights(departure_id, arrival_id, outbound_date, label, passengers):
         "api_key":        SERPAPI_KEY,
     }
     try:
-        results  = GoogleSearch(params).get_dict()
+        results = GoogleSearch(params).get_dict()
+        err     = results.get("error")
+        if err and _is_quota_error(err):
+            SERPAPI_EXHAUSTED = True
+            print(f"QUOTA AGOTADA — switch a flight-goat")
+            flights, insights = _search_flights_via_goat(departure_id, arrival_id, outbound_date, passengers)
+            print(f"    fallback OK ({len(flights)} vuelos)")
+            return flights, insights
+        if err:
+            print(f"ERROR: {err}")
+            return [], {}
         flights  = results.get("best_flights", []) + results.get("other_flights", [])
         insights = results.get("price_insights", {})
         print(f"OK ({len(flights)} vuelos)")
         return flights, insights
     except Exception as e:
+        if _is_quota_error(e):
+            SERPAPI_EXHAUSTED = True
+            print(f"QUOTA AGOTADA — switch a flight-goat")
+            flights, insights = _search_flights_via_goat(departure_id, arrival_id, outbound_date, passengers)
+            print(f"    fallback OK ({len(flights)} vuelos)")
+            return flights, insights
         print(f"ERROR: {e}")
         return [], {}
 

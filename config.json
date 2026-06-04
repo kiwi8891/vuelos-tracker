@@ -1,82 +1,14 @@
 {
   "passengers": {
     "adults": 2,
-    "children": 2,
+    "children": 0,
     "infants_on_lap": 0
   },
   "alerts": {
     "own_alert_pct": 0.05,
     "own_min_samples": 3
   },
-  "trips": [
-    {
-      "id": "asia-oct-2026",
-      "name": "Asia Octubre 2026",
-      "outbound": {
-        "origin": "BCN",
-        "destinations": ["ICN", "TPE", "HKG"],
-        "dates": ["2026-09-30", "2026-10-01"],
-        "max_stops": null
-      },
-      "return": {
-        "origins": ["PEK", "PVG", "SZX"],
-        "destination": "BCN",
-        "dates": ["2026-10-16", "2026-10-17"],
-        "max_stops": null
-      }
-    },
-    {
-      "id": "asia-oct-2026-directo",
-      "name": "Asia Oct 2026 — Directo",
-      "outbound": {
-        "origin": "BCN",
-        "destinations": ["ICN", "TPE", "HKG"],
-        "dates": ["2026-09-30"],
-        "max_stops": 0
-      },
-      "return": {
-        "origins": ["PEK", "PVG", "SZX"],
-        "destination": "BCN",
-        "dates": ["2026-10-16"],
-        "max_stops": 0
-      }
-    },
-    {
-      "id": "icn-bcn-directo",
-      "name": "Seúl → BCN Directo",
-      "return": {
-        "origins": ["ICN"],
-        "destination": "BCN",
-        "dates": ["2026-10-16", "2026-10-17"],
-        "max_stops": 0
-      }
-    }
-  ],
-  "combos": [
-    {
-      "name": "Seúl Ida+Vuelta Directo",
-      "outbound_trip": "asia-oct-2026-directo",
-      "return_trip": "icn-bcn-directo"
-    }
-  ],
-  "stop_loss": [
-    {
-      "label": "IDA escalas BCN→ICN",
-      "trip_id": "asia-oct-2026",
-      "type": "outbound",
-      "origin": "BCN",
-      "destination": "ICN",
-      "anchor_price": 1428,
-      "threshold_pct": 0.03
-    },
-    {
-      "label": "VUELTA escalas PVG→BCN",
-      "trip_id": "asia-oct-2026",
-      "type": "return",
-      "origin": "PVG",
-      "destination": "BCN",
-      "anchor_price": 1278,
-      "threshold_pct": 0.05
-    }
-  ]
+  "trips": [],
+  "combos": [],
+  "stop_loss": []
 }

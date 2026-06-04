@@ -1,71 +1,45 @@
 # VUELOS TRACKER — Contexto del proyecto
 
 ## Qué hace
-Monitorización diaria de precios de vuelo para un viaje familiar en octubre 2026.
+Monitorización diaria de precios de vuelo para viajes familiares.
 Ejecuta automáticamente cada día vía **launchd en Mac Mini local** (09:00h), guarda historial en CSV,
 hace git commit + push automático al repo, y manda resumen + gráfica de evolución por Telegram.
-Dashboard interactivo en GitHub Pages.
 
 ## Pasajeros
-- 2 adultos + 2 niños (5 años + 2-3 años, ambos con asiento propio)
-- Parámetros API: adults=2, children=2, infants_on_lap=0
-- **Total: 4 personas** — todos los precios se muestran en total y €/persona
+Configurados en `config.json`:
+- `adults`, `children`, `infants_on_lap`
+- Todos los precios se muestran en total y €/persona (total ÷ nº adultos + niños)
 
 ## Rutas monitorizadas
-Definidas en `config.json`. Actualmente tres trips + un combo cross-trip:
-
-### asia-oct-2026 (con escalas)
-- **IDA**: BCN → ICN (Seúl) / TPE (Taipei) / HKG (Hong Kong) — 30 sep y 1 oct 2026
-- **VUELTA**: PEK (Pekín) / PVG (Shanghái) / SZX (Shenzhen) → BCN — 16 y 17 oct 2026
-- 4 llamadas API/día
-
-### asia-oct-2026-directo (solo directos)
-- **IDA**: BCN → ICN / TPE / HKG — 30 sep 2026 (solo 1 fecha para ahorrar cuota)
-- **VUELTA**: PEK / PVG / SZX → BCN — 16 oct 2026
-- max_stops: 0
-- 2 llamadas API/día
-
-### icn-bcn-directo (vuelta solo Seúl, sin outbound)
-- **VUELTA**: ICN (Seúl) → BCN directo — 16 y 17 oct 2026
-- Sin tramo de ida (outbound: null en config.json)
-- max_stops: 0
-- 2 llamadas API/día
-
-**Total: 8 llamadas/día × ~31 días = ~248/mes** (límite: 250 gratis)
-
-### Combo "Seúl Ida+Vuelta Directo" (sin llamadas extra)
-Sección calculada cruzando datos existentes: IDA de `asia-oct-2026-directo` + VUELTA de `icn-bcn-directo`.
-Aparece al final del mensaje Telegram como cuarta sección. Configurado en `combos` de `config.json`.
+Definidas en `config.json` → array `trips`. Ver sección "Cómo añadir/modificar búsquedas".
 
 ## Stack técnico
 - **API de vuelos**: SerpAPI Google Flights (free: 250 llamadas/mes)
   - Multi-aeropuerto: `arrival_id="ICN,TPE,HKG"` = 1 sola llamada
   - `price_insights.price_level` de Google para detectar precios bajos
 - **Alertas**: Telegram Bot — resumen diario + gráfica PNG
-- **Historial**: `data/prices.csv` — commiteado y pusheado automáticamente por `flight_tracker.py` al final de cada ejecución
-- **Dashboard**: GitHub Pages → `docs/index.html` (ClickHouse design system)
-- **Automatización**: launchd en Mac Mini — `~/Library/LaunchAgents/com.gerardo.vuelostracker.plist` — 09:00h hora local
+- **Historial**: `data/prices.csv` — commiteado y pusheado automáticamente por `flight_tracker.py`
+- **Automatización**: launchd en Mac Mini — `~/Library/LaunchAgents/com.gerardo.vuelostracker.plist`
 
 ## Archivos clave
 - `config.json` — configuración de viajes, pasajeros y alertas (**editar aquí para cambiar búsquedas**)
 - `flight_tracker.py` — script principal, lee config.json; al terminar hace git commit + push del CSV
-- `.github/workflows/daily_check.yml` — workflow de GitHub Actions (ya no se usa, conservado como backup)
+- `.github/workflows/daily_check.yml` — workflow de GitHub Actions (backup, no activo)
 - `data/prices.csv` — historial de precios (columnas: date, trip_id, type, origin, destination, flight_date, price_eur, stops, airline, duration_m, price_level, typical_low, typical_high)
-- `docs/index.html` — dashboard GitHub Pages
 - `requirements.txt` — dependencias Python (incluye matplotlib)
 - `~/Library/LaunchAgents/com.gerardo.vuelostracker.plist` — agente launchd (Mac Mini, fuera del repo)
 
 ## Cómo añadir/modificar búsquedas
-Editar `config.json`. Estructura de un trip (trips) y de un combo cross-trip (combos):
+Editar `config.json`. Estructura de un trip y de un combo cross-trip:
 ```json
 {
   "id": "id-unico",
   "name": "Nombre visible",
-  "outbound": {               ← opcional; omitir para trips solo-vuelta
+  "outbound": {
     "origin": "BCN",
     "destinations": ["ICN", "TPE"],
     "dates": ["2026-10-01"],
-    "max_stops": null         ← null = sin filtro, 0 = solo directos
+    "max_stops": null
   },
   "return": {
     "origins": ["PEK", "PVG"],
@@ -75,46 +49,54 @@ Editar `config.json`. Estructura de un trip (trips) y de un combo cross-trip (co
   }
 }
 ```
-Estructura de un combo (sin llamadas API extra, cruza datos de trips ya existentes):
+- `outbound` es opcional (omitir para trips solo-vuelta)
+- `max_stops`: `null` = sin filtro, `0` = solo directos
+
+Estructura de un combo (sin llamadas API extra, cruza datos de trips existentes):
 ```json
 {
-  "id": "id-unico",
   "name": "Nombre visible",
   "outbound_trip": "id-del-trip-que-tiene-la-ida",
   "return_trip":   "id-del-trip-que-tiene-la-vuelta"
 }
 ```
-Commit + push → ejecuta automáticamente en el siguiente cron (09:00h), o lanzar manualmente:
+
+Commit + push → ejecuta en el siguiente cron (09:00h), o lanzar manualmente:
 ```bash
 launchctl start com.gerardo.vuelostracker
 ```
 
+## Stop-loss
+Configurado en `config.json` → array `stop_loss`. Alerta si el precio sube por encima de un umbral:
+```json
+{
+  "label": "Descripción",
+  "trip_id": "id-del-trip",
+  "type": "outbound",
+  "origin": "BCN",
+  "destination": "ICN",
+  "anchor_price": 1428,
+  "threshold_pct": 0.03
+}
+```
+
 ## Benchmarks de precio
-1. **Google**: `price_insights.price_level` = low / typical / high (puede estar vacío para fechas lejanas)
-2. **Propio**: alerta si el precio baja ≥5% respecto a la media histórica (activa tras 3+ días de datos)
-
-## KPIs mostrados
-- Precio total del viaje (todos los pasajeros)
-- **€/persona** (precio total ÷ 4) — en Telegram y dashboard
-
-## Dashboard (GitHub Pages)
-URL: https://kiwi8891.github.io/vuelos-tracker/
-- Tabs por trip
-- Hero con mejor combo (total + €/pers)
-- Tarjetas de precio por fecha de vuelo
-- Gráficas de evolución (Chart.js)
-- Tabla con filtros (tipo, escalas)
-- Panel de config con JSON resaltado
-- Diseño: ClickHouse design system (#000 + #faff69 neon volt)
+1. **Google**: `price_insights.price_level` = low / typical / high
+2. **Propio**: alerta si el precio baja ≥X% respecto a la media histórica (activa tras 3+ días)
 
 ## Variables de entorno
 ```
-SERPAPI_KEY          # serpapi.com → dashboard
+SERPAPI_KEY          # serpapi.com
 TELEGRAM_BOT_TOKEN   # @BotFather en Telegram
 TELEGRAM_CHAT_ID     # @userinfobot en Telegram
 ```
 Guardadas en `.env` (local, no commiteado) y en el plist de launchd (`EnvironmentVariables`).
-Los secrets de GitHub siguen configurados en el repo como backup.
+
+## Para activar/desactivar launchd
+```bash
+launchctl load   ~/Library/LaunchAgents/com.gerardo.vuelostracker.plist
+launchctl unload ~/Library/LaunchAgents/com.gerardo.vuelostracker.plist
+```
 
 ## Para ejecutar localmente
 ```bash

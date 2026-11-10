@@ -5,16 +5,6 @@
   "max_duracion_ida_h": 22,
   "ganga_cada_n_dias": 3,
   "ventanas": {
-    "A_antes": {
-      "nombre": "Semana Santa (reduccion antes) 9-27 mar",
-      "pares": [["2027-03-09","2027-03-23"],["2027-03-09","2027-03-24"],["2027-03-10","2027-03-24"],
-                ["2027-03-10","2027-03-25"],["2027-03-11","2027-03-25"],["2027-03-09","2027-03-25"]]
-    },
-    "A_despues": {
-      "nombre": "Semana Santa (reduccion despues) 17 mar-4 abr",
-      "pares": [["2027-03-17","2027-04-01"],["2027-03-18","2027-04-01"],["2027-03-17","2027-04-02"],
-                ["2027-03-18","2027-04-02"],["2027-03-19","2027-04-02"]]
-    },
     "B": {
       "nombre": "Abril 18 abr-6 may",
       "pares": [["2027-04-18","2027-05-02"],["2027-04-18","2027-05-03"],["2027-04-19","2027-05-03"],
@@ -22,14 +12,8 @@
     }
   },
   "grupos": [
-    {"id": "TPE-A_antes",   "destino": "TPE",     "ventana": "A_antes",   "modo": "completo",   "alerta": {"escala": 600, "directo": 600}},
-    {"id": "TPE-A_despues", "destino": "TPE",     "ventana": "A_despues", "modo": "completo",   "alerta": {"escala": 600, "directo": 600}},
     {"id": "TPE-B",         "destino": "TPE",     "ventana": "B",         "modo": "completo",   "alerta": {"escala": 600, "directo": 600}},
     {"id": "ICN-B",         "destino": "ICN",     "ventana": "B",         "modo": "completo",   "alerta": {"directo": 800, "escala": 600}},
-    {"id": "CHN-A_antes",   "destino": "PEK,PVG", "ventana": "A_antes",   "modo": "completo",   "alerta": {"directo": 600}},
-    {"id": "CHN-A_despues", "destino": "PEK,PVG", "ventana": "A_despues", "modo": "completo",   "alerta": {"directo": 600}},
-    {"id": "JPN-A_antes",   "destino": "NRT,HND", "ventana": "A_antes",   "modo": "solo_ganga", "alerta": {"directo": 750, "escala": 650}},
-    {"id": "JPN-A_despues", "destino": "NRT,HND", "ventana": "A_despues", "modo": "solo_ganga", "alerta": {"directo": 750, "escala": 650}},
     {"id": "YUC-B",         "destino": "CUN,MID", "ventana": "B",         "modo": "solo_ganga", "alerta": {"directo": 500}}
   ]
 }

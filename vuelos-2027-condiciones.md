@@ -5,6 +5,8 @@ _Los precios de referencia son orientativos (vistos en nov 2026 para otras fecha
 
 ## 1. Qué buscar
 
+> **10 nov 2026: Semana Santa (ventana A) descartada.** Solo se rastrea la ventana B (abril): TPE, ICN y Yucatán. China y Japón fuera.
+
 | Destino | Ventana A (Semana Santa) | Ventana B (Abril) | Modo |
 |---|---|---|---|
 | **Taiwán (TPE)** | ✅ | ✅ | Seguimiento completo |

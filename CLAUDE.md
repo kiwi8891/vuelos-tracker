@@ -3,7 +3,8 @@
 ## ACTIVO (desde 2026-11-09): viaje largo 2027 → `tracker_2027.py`
 - Condiciones: `vuelos-2027-condiciones.md` (humano) → `config_2027.json` (lo que lee el script).
 - **Ida y vuelta** para 4 pax (2+2) con SerpAPI `type=1`, `departure_id=BCN,MAD`, `stops=2` (≤1 escala), descarta ida > 22 h. Precio de SerpAPI = total para los 4 → €/p = total/4.
-- 9 grupos (destino × ventana A_antes / A_despues / B). Cada día **1 par de fechas por grupo, rotando**; los de `solo_ganga` (JPN, YUC) solo cada 3 días y solo salen si bajan del umbral. ≈210 búsquedas/mes de 250. Comprueba la cuota antes (`account.json`, gratis).
+- **Semana Santa descartada (2026-11-10):** solo ventana B (abril). 3 grupos: TPE-B, ICN-B (completos) y YUC-B (solo_ganga). China y Japón fuera.
+- Grupos = destino × ventana. Cada día **1 par de fechas por grupo, rotando**; los de `solo_ganga` (YUC) solo cada 3 días y solo salen si bajan del umbral. ≈70 búsquedas/mes de 250. Comprueba la cuota antes (`account.json`, gratis).
 - Fallo ruidoso: si 0 resultados en todo → aviso por Telegram + exit 1.
 - launchd `com.gerardo.vuelostracker` ejecuta `tracker_2027.py` a las 09:00, **activo desde 2026-11-10** (1.ª ejecución automática: 11-nov). `flight_tracker.py` (viaje 2026) queda inactivo. El plist lleva un argumento sobrante `flight_tracker.py`, inofensivo.
 - Historial: `data/prices_2027.csv` (mejor directo y mejor con escala por grupo y día).
@@ -17,7 +18,7 @@
 - El push fallaba desde may-2026 por un token caducado en la URL del remote → remote limpio + `gh auth setup-git`. Commits locales sin subir de may–jun en la rama `backup-local-2026-06`.
 
 ### Siguiente sesión empieza por
-Comprobar que llegó el Telegram de las 09:00 (log `~/Library/Logs/vuelostracker.log`). Luego, mirar `data/prices_2027.csv` tras 1–2 semanas: si A_antes sigue siendo claramente más barata, decidir la reducción antes. Calibrar umbrales con datos reales.
+Comprobar que llegó el Telegram de las 09:00 (log `~/Library/Logs/vuelostracker.log`). Luego, mirar `data/prices_2027.csv` tras 1–2 semanas: Calibrar umbrales con datos reales.
 
 ---
 

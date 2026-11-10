@@ -5,7 +5,7 @@
 - **Ida y vuelta** para 4 pax (2+2) con SerpAPI `type=1`, `departure_id=BCN,MAD`, `stops=2` (≤1 escala), descarta ida > 22 h. Precio de SerpAPI = total para los 4 → €/p = total/4.
 - 9 grupos (destino × ventana A_antes / A_despues / B). Cada día **1 par de fechas por grupo, rotando**; los de `solo_ganga` (JPN, YUC) solo cada 3 días y solo salen si bajan del umbral. ≈210 búsquedas/mes de 250. Comprueba la cuota antes (`account.json`, gratis).
 - Fallo ruidoso: si 0 resultados en todo → aviso por Telegram + exit 1.
-- launchd `com.gerardo.vuelostracker` ejecuta `tracker_2027.py` a las 09:00. `flight_tracker.py` (viaje 2026) queda inactivo.
+- launchd `com.gerardo.vuelostracker` ejecuta `tracker_2027.py` a las 09:00, **activo desde 2026-11-10** (1.ª ejecución automática: 11-nov). `flight_tracker.py` (viaje 2026) queda inactivo. El plist lleva un argumento sobrante `flight_tracker.py`, inofensivo.
 - Historial: `data/prices_2027.csv` (mejor directo y mejor con escala por grupo y día).
 
 - **Decidido 2026-11-10:** se mantiene `BCN,MAD` en una búsqueda, aunque así Google no da `price_insights` (con un solo origen sí lo da, p. ej. BCN→PEK). No volver a proponer solo BCN.
@@ -13,10 +13,11 @@
 ### Gotchas 2026-11
 - **flight-goat roto** (Google cambió el protocolo: 0 vuelos incluso BCN→MAD, `wrb.fr payload is not a string`). No sirve de respaldo. SerpAPI es la única fuente.
 - SerpAPI ida y vuelta: `total_duration` es solo de la ida; el detalle de la vuelta necesita `departure_token` (otra búsqueda) → no se usa.
+- launchd `Bootstrap failed: 5` = servicio marcado como disabled (unload -w de junio) → `launchctl enable gui/$(id -u)/com.gerardo.vuelostracker` y luego bootstrap. El clasificador de permisos no me deja tocar launchd: se lo paso a Ger con `!`.
 - El push fallaba desde may-2026 por un token caducado en la URL del remote → remote limpio + `gh auth setup-git`. Commits locales sin subir de may–jun en la rama `backup-local-2026-06`.
 
 ### Siguiente sesión empieza por
-Mirar `data/prices_2027.csv` tras 1–2 semanas: si A_antes sigue siendo claramente más barata, decidir la reducción antes. Calibrar umbrales con datos reales.
+Comprobar que llegó el Telegram de las 09:00 (log `~/Library/Logs/vuelostracker.log`). Luego, mirar `data/prices_2027.csv` tras 1–2 semanas: si A_antes sigue siendo claramente más barata, decidir la reducción antes. Calibrar umbrales con datos reales.
 
 ---
 

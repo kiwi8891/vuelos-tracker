@@ -8,6 +8,8 @@
 - launchd `com.gerardo.vuelostracker` ejecuta `tracker_2027.py` a las 09:00. `flight_tracker.py` (viaje 2026) queda inactivo.
 - Historial: `data/prices_2027.csv` (mejor directo y mejor con escala por grupo y día).
 
+- **Decidido 2026-11-10:** se mantiene `BCN,MAD` en una búsqueda, aunque así Google no da `price_insights` (con un solo origen sí lo da, p. ej. BCN→PEK). No volver a proponer solo BCN.
+
 ### Gotchas 2026-11
 - **flight-goat roto** (Google cambió el protocolo: 0 vuelos incluso BCN→MAD, `wrb.fr payload is not a string`). No sirve de respaldo. SerpAPI es la única fuente.
 - SerpAPI ida y vuelta: `total_duration` es solo de la ida; el detalle de la vuelta necesita `departure_token` (otra búsqueda) → no se usa.

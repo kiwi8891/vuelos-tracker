@@ -3,8 +3,8 @@
 ## ACTIVO (desde 2026-11-09): viaje largo 2027 → `tracker_2027.py`
 - Condiciones: `vuelos-2027-condiciones.md` (humano) → `config_2027.json` (lo que lee el script).
 - **Ida y vuelta** para 4 pax (2+2) con SerpAPI `type=1`, `departure_id=BCN,MAD`, `stops=2` (≤1 escala), descarta ida > 22 h. Precio de SerpAPI = total para los 4 → €/p = total/4.
-- **Semana Santa descartada (2026-11-10):** solo ventana B (abril). 3 grupos: TPE-B, ICN-B (completos) y YUC-B (solo_ganga). China y Japón fuera.
-- Grupos = destino × ventana. Cada día **1 par de fechas por grupo, rotando**; los de `solo_ganga` (YUC) solo cada 3 días y solo salen si bajan del umbral. ≈70 búsquedas/mes de 250. Comprueba la cuota antes (`account.json`, gratis).
+- **Semana Santa descartada (2026-11-10):** solo ventana B (abril). 5 grupos: TPE-B, ICN-B (completos) y CHN-B, JPN-B, YUC-B (solo_ganga; China y Japón solo ganga por Primero de Mayo y Golden Week).
+- Grupos = destino × ventana. Cada día **1 par de fechas por grupo, rotando**; los de `solo_ganga` (CHN, JPN, YUC) solo cada 3 días y solo salen si bajan del umbral. ≈90 búsquedas/mes de 250. Comprueba la cuota antes (`account.json`, gratis).
 - Fallo ruidoso: si 0 resultados en todo → aviso por Telegram + exit 1.
 - launchd `com.gerardo.vuelostracker` ejecuta `tracker_2027.py` a las 09:00, **activo desde 2026-11-10** (1.ª ejecución automática: 11-nov). `flight_tracker.py` (viaje 2026) queda inactivo. El plist lleva un argumento sobrante `flight_tracker.py`, inofensivo.
 - Historial: `data/prices_2027.csv` (mejor directo y mejor con escala por grupo y día).

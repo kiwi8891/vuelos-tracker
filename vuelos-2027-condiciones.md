@@ -5,7 +5,7 @@ _Los precios de referencia son orientativos (vistos en nov 2026 para otras fecha
 
 ## 1. Qué buscar
 
-> **10 nov 2026: Semana Santa (ventana A) descartada.** Solo se rastrea la ventana B (abril): TPE, ICN y Yucatán. China y Japón fuera.
+> **10 nov 2026: Semana Santa (ventana A) descartada.** Solo se rastrea la ventana B (abril): TPE e ICN completos; Yucatán, China y Japón entran en abril solo si es ganga (Golden Week japonesa y Primero de Mayo chino encarecen allí).
 
 | Destino | Ventana A (Semana Santa) | Ventana B (Abril) | Modo |
 |---|---|---|---|

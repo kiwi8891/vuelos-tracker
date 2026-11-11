@@ -12,3 +12,6 @@ date,grupo,ventana,ida,vuelta,origen,destino,tipo,precio_total,precio_pp,escalas
 2026-11-09,JPN-A_despues,A_despues,2027-03-18,2027-04-02,BCN,NRT,escala,3586,896,1,Air China,19.0,
 2026-11-09,YUC-B,B,2027-04-18,2027-05-03,MAD,CUN,directo,4483,1121,0,Air Europa,10.4,
 2026-11-09,YUC-B,B,2027-04-18,2027-05-03,BCN,CUN,escala,2943,736,1,Air Canada,16.4,
+2026-11-11,TPE-B,B,2027-04-20,2027-05-04,BCN,TPE,escala,2478,620,1,China Eastern,21.5,
+2026-11-11,ICN-B,B,2027-04-20,2027-05-04,BCN,ICN,directo,3762,940,0,Asiana Airlines,12.5,
+2026-11-11,ICN-B,B,2027-04-20,2027-05-04,BCN,ICN,escala,2564,641,1,Etihad,17.1,

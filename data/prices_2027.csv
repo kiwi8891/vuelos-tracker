@@ -54,3 +54,6 @@ date,grupo,ventana,ida,vuelta,origen,destino,tipo,precio_total,precio_pp,escalas
 2026-11-18,JPN-B,B,2027-04-19,2027-05-04,BCN,NRT,escala,3197,799,1,KLM,18.1,
 2026-11-18,YUC-B,B,2027-04-19,2027-05-04,MAD,CUN,directo,2938,734,0,World 2 Fly,10.2,
 2026-11-18,YUC-B,B,2027-04-19,2027-05-04,BCN,CUN,escala,3171,793,1,Lufthansa/Discover Airlines,16.4,
+2026-11-19,TPE-B,B,2027-04-18,2027-05-03,BCN,TPE,escala,2479,620,1,China Eastern,21.5,
+2026-11-19,ICN-B,B,2027-04-18,2027-05-03,BCN,ICN,directo,4264,1066,0,Korean Air,12.5,
+2026-11-19,ICN-B,B,2027-04-18,2027-05-03,MAD,ICN,escala,2431,608,1,Air China,15.7,

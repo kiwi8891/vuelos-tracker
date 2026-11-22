@@ -68,3 +68,6 @@ date,grupo,ventana,ida,vuelta,origen,destino,tipo,precio_total,precio_pp,escalas
 2026-11-21,JPN-B,B,2027-04-20,2027-05-04,BCN,NRT,escala,3382,846,1,SWISS,16.5,
 2026-11-21,YUC-B,B,2027-04-20,2027-05-04,MAD,CUN,directo,3283,821,0,Air Europa,10.4,
 2026-11-21,YUC-B,B,2027-04-20,2027-05-04,MAD,CUN,escala,2917,729,1,Avianca,16.2,
+2026-11-22,TPE-B,B,2027-04-19,2027-05-04,BCN,TPE,escala,2131,533,1,China Eastern,21.5,
+2026-11-22,ICN-B,B,2027-04-19,2027-05-04,BCN,ICN,directo,4027,1007,0,Korean Air,12.5,
+2026-11-22,ICN-B,B,2027-04-19,2027-05-04,BCN,ICN,escala,2681,670,1,Scandinavian Airlines,16.6,

@@ -86,3 +86,6 @@ date,grupo,ventana,ida,vuelta,origen,destino,tipo,precio_total,precio_pp,escalas
 2026-11-25,TPE-B,B,2027-04-18,2027-05-03,BCN,TPE,escala,2770,692,1,Etihad,17.2,
 2026-11-25,ICN-B,B,2027-04-18,2027-05-03,BCN,ICN,directo,4010,1002,0,Korean Air,12.5,
 2026-11-25,ICN-B,B,2027-04-18,2027-05-03,BCN,ICN,escala,2591,648,1,Etihad,17.1,
+2026-11-26,TPE-B,B,2027-04-19,2027-05-03,BCN,TPE,escala,2770,692,1,Etihad,17.2,
+2026-11-26,ICN-B,B,2027-04-19,2027-05-03,BCN,ICN,directo,3764,941,0,Korean Air,12.5,
+2026-11-26,ICN-B,B,2027-04-19,2027-05-03,BCN,ICN,escala,2766,692,1,Air China,16.1,

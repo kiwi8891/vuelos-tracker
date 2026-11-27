@@ -2,7 +2,8 @@
 """Viaje largo 2027: ida y vuelta para 4 pax via SerpAPI Google Flights.
 
 Config: config_2027.json (fuente humana: vuelos-2027-condiciones.md).
-Cada dia prueba UN par de fechas por grupo (rotando) para caber en 250 busquedas/mes.
+Cada dia prueba 'pares_por_dia' pares de fechas por grupo (rotando) para caber en 250 busquedas/mes.
+Directos primero: la escala solo se informa si es mas barata que el directo o no hay directo.
 Grupos 'solo_ganga' solo cada N dias y solo se reportan si bajan del umbral.
 Historial: data/prices_2027.csv.  Uso: python3 tracker_2027.py [--dry-run]
 """
@@ -127,9 +128,12 @@ def main():
     ganga_hoy = n % cfg["ganga_cada_n_dias"] == 0
     grupos = [g for g in cfg["grupos"] if g["modo"] == "completo" or ganga_hoy]
 
+    ppd = cfg.get("pares_por_dia", 1)
     left, plan = searches_left()
-    if left is not None and left < len(grupos):
-        grupos = [g for g in grupos if g["modo"] == "completo"][:max(left, 0)]
+    if left is not None and left < len(grupos) * ppd:
+        ppd = 1
+        if left < len(grupos):
+            grupos = [g for g in grupos if g["modo"] == "completo"][:max(left, 0)]
     if not grupos:
         telegram(f"⚠️ <b>Vuelos 2027</b>: SerpAPI sin busquedas ({left} restantes, {plan}). Hoy no se mira nada.")
         sys.exit(1)
@@ -138,41 +142,56 @@ def main():
     rows, lines, alerts = [], [], []
     vacios, errores = 0, 0
 
+    n_busq = 0
     for g in grupos:
         pares = cfg["ventanas"][g["ventana"]]["pares"]
         k = n if g["modo"] == "completo" else n // cfg["ganga_cada_n_dias"]
-        ida, vuelta = pares[k % len(pares)]
-        print(f"[{g['id']}] {ida} -> {vuelta} ...", end=" ", flush=True)
-        try:
-            res, raw = search(cfg, g, ida, vuelta, pax)
-        except Exception as e:
-            errores += 1
-            print("ERROR", e)
-            lines.append(f"❌ {g['id']}: error {e}")
-            continue
-        print(f"{raw} vuelos, {len(res)} validos")
-        if raw == 0:
-            vacios += 1
-        prev = [float(h["precio_pp"]) for h in hist if h["grupo"] == g["id"]]
-        prev_min = min(prev) if prev else None
-
-        for tipo in ("directo", "escala"):
-            cand = [r for r in res if r["tipo"] == tipo]
-            if not cand:
+        res = []  # (ida, vuelta, resultado)
+        for j in range(ppd):
+            ida, vuelta = pares[(k * ppd + j) % len(pares)]
+            n_busq += 1
+            print(f"[{g['id']}] {ida} -> {vuelta} ...", end=" ", flush=True)
+            try:
+                r, raw = search(cfg, g, ida, vuelta, pax)
+            except Exception as e:
+                errores += 1
+                print("ERROR", e)
+                lines.append(f"❌ {g['id']} {dm(ida)}→{dm(vuelta)}: error {e}")
                 continue
-            b = min(cand, key=lambda r: r["precio_total"])
-            row = {"date": today.isoformat(), "grupo": g["id"], "ventana": g["ventana"],
-                   "ida": ida, "vuelta": vuelta, **b}
-            rows.append(row)
+            print(f"{raw} vuelos, {len(r)} validos")
+            if raw == 0:
+                vacios += 1
+            for tipo in ("directo", "escala"):
+                cand = [x for x in r if x["tipo"] == tipo]
+                if cand:
+                    b = min(cand, key=lambda x: x["precio_total"])
+                    rows.append({"date": today.isoformat(), "grupo": g["id"], "ventana": g["ventana"],
+                                 "ida": ida, "vuelta": vuelta, **b})
+                    res.append((ida, vuelta, b))
+
+        best = {}
+        for ida, vuelta, b in res:
+            if b["tipo"] not in best or b["precio_total"] < best[b["tipo"]][2]["precio_total"]:
+                best[b["tipo"]] = (ida, vuelta, b)
+        if "directo" in best and "escala" in best and \
+                best["escala"][2]["precio_total"] >= best["directo"][2]["precio_total"]:
+            del best["escala"]  # prioriza directo
+        for tipo in ("directo", "escala"):
+            if tipo not in best:
+                continue
+            ida, vuelta, b = best[tipo]
+            prev = [float(h["precio_pp"]) for h in hist if h["grupo"] == g["id"] and h["tipo"] == tipo]
+            prev_min = min(prev) if prev else None
             umbral = g["alerta"].get(tipo)
             bajo = umbral is not None and b["precio_pp"] < umbral
             if g["modo"] == "solo_ganga" and not bajo:
                 continue
+            icon = "✈️ DIRECTO" if tipo == "directo" else "escala"
             txt = (f"{g['id']} · {dm(ida)}→{dm(vuelta)} · {b['origen']}→{b['destino']} · "
-                   f"<b>{b['precio_pp']} €/p</b> ({b['precio_total']:,} €) · {tipo} · "
+                   f"<b>{b['precio_pp']} €/p</b> ({b['precio_total']:,} €) · {icon} · "
                    f"{b['aerolinea']} · {b['duracion_ida_h']} h").replace(",", ".")
             if prev_min and b["precio_pp"] < prev_min:
-                txt += f" · 📉 mín. histórico (antes {int(prev_min)})"
+                txt += f" · 📉 mín. histórico {tipo} (antes {int(prev_min)})"
             if b["price_level"] == "low":
                 txt += " · Google: BAJO"
             if bajo:
@@ -183,10 +202,10 @@ def main():
     if not DRY:
         save(rows)
 
-    ok = len(grupos) - errores - vacios
-    head = f"✈️ <b>VUELOS 2027</b> — {today:%d/%m} · {ok}/{len(grupos)} búsquedas con datos"
+    ok = n_busq - errores - vacios
+    head = f"✈️ <b>VUELOS 2027</b> — {today:%d/%m} · {ok}/{n_busq} búsquedas con datos"
     if left is not None:
-        head += f" · SerpAPI {left - len(grupos)} restantes"
+        head += f" · SerpAPI {left - n_busq} restantes"
     msg = "\n".join([head, ""] + alerts + ([""] if alerts else []) + lines)
     if ok == 0:
         msg += "\n\n⚠️ <b>0 resultados en todas las búsquedas: revisar el tracker</b>"

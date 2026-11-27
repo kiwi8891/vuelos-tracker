@@ -4,6 +4,7 @@
   "origenes": "BCN,MAD",
   "max_duracion_ida_h": 22,
   "ganga_cada_n_dias": 3,
+  "pares_por_dia": 2,
   "ventanas": {
     "B": {
       "nombre": "Abril 18 abr-6 may",
@@ -14,8 +15,6 @@
   "grupos": [
     {"id": "TPE-B",         "destino": "TPE",     "ventana": "B",         "modo": "completo",   "alerta": {"escala": 600, "directo": 600}},
     {"id": "ICN-B",         "destino": "ICN",     "ventana": "B",         "modo": "completo",   "alerta": {"directo": 800, "escala": 600}},
-    {"id": "CHN-B",         "destino": "PEK,PVG", "ventana": "B",         "modo": "solo_ganga", "alerta": {"directo": 600}},
-    {"id": "JPN-B",         "destino": "NRT,HND", "ventana": "B",         "modo": "solo_ganga", "alerta": {"directo": 750, "escala": 650}},
-    {"id": "YUC-B",         "destino": "CUN,MID", "ventana": "B",         "modo": "solo_ganga", "alerta": {"directo": 500}}
+    {"id": "CHN-B",         "destino": "PEK,PVG", "ventana": "B",         "modo": "completo",   "alerta": {"directo": 600}}
   ]
 }
